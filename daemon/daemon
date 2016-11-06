@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Will be executed as user "root".
+
+# Name this file "daemon.sh" in your plugin-archive. It will be renamed to NAME
+# during installation
+
+pluginname=$(basename $0 .sh)
+
+if [ -x /usr/bin/logger ]; then
+    /usr/bin/logger "loxberry-plugin-$pluginname - DAEMON Script from Stats4Lox Plugin"
+fi
+
+# Use correct rrdcached settings
+if [ !-L /etc/default/rrdcached ]; then
+  mv /etc/default/rrdcached /etc/default/rrdcached.old
+  ln -s REPLACEINSTALLFOLDER/config/plugins/REPLACEFOLDERNAME/rrdcached /etc/default/rrdcached
+  /etc/init.d/rrdcached restart
+fi
+
+exit 0

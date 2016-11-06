@@ -1,0 +1,12 @@
+#
+# Databases
+#
+#  0: DB-Name / Statistic ID
+#  1: Step
+#  2: Description
+#  3: Loxone-Name to fetch
+#  4: Miniserver
+#  5: Min
+#  6: Max
+#  7: Fetch(2) / Pause(1) / Error(0)
+#

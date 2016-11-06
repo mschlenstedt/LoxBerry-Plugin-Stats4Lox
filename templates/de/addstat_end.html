@@ -1,0 +1,215 @@
+											</table>
+											</div>
+
+											<a href="#" id="addrrabtn" onClick="AddRRA();return false;"data-role="button" data-icon="plus" data-mini="true" data-inline="true">RRA hinzuf&uuml;gen</a>
+											<a href="#" id="delrrabtn" onClick="DelRRA();return false;"data-role="button" data-icon="minus" data-mini="true" data-inline="true">RRA l&ouml;schen</a>
+
+											<p>
+											&nbsp;
+											</p>
+
+											<table class="formtable" border="0" width="100%">
+												<tr>
+												<td></td>
+												<td colspan=3>
+													<div id="form-error-message" class="form-error-message"></div>
+												</td>
+												</tr>
+											</table>
+
+											<p>
+											<center>
+											<table border=0 width="80%">
+											<tr>
+											<td width="45%" align="right"><a id="btncancel" data-role="button" data-inline="true" data-mini="true" data-icon="delete" href="./index.cgi">Abbrechen</a>
+											<button type="submit" form="main_form" id="btnsubmit" data-role="button" data-inline="true" data-mini="true" data-icon="check">Speichern</button></td>
+											<td width="5"></td>
+											<td width="25%"><label id="labelsavedbsettings" for="savedbsettings">Als Vorgabe speichern</label><input onclick="disable()" 
+													type="checkbox" name="savedbsettings" id="savedbsettings" data-mini="true"></td>
+											<td width="25%"><input type="text" name="savedbsettingsname" id="savedbsettingsname" value="" placeholder="Vorgabenname"></td>
+											</tr>
+											</table>
+											</center>
+											</p>
+
+									</form>
+
+        	<script>
+          var $messages = $('#form-error-message');
+          $.validate({
+            modules : 'security',
+            scrollToTopOnError : true,
+            errorMessagePosition : $messages,
+          });
+
+		  	    	// Disable some options on Load depending on selected value
+		  	    	disable();
+
+ 		  	   	// Disable some options on click depending on selected value
+ 		  	   	function disable() {
+ 		  	     if ( document.main_form.dbsettingsdefault.checked == true ) {
+													// Total number of RRAs
+													var iteration = document.getElementById('rracount').value;
+													iteration = parseInt(iteration)
+													while (iteration > 1) { 
+															DelRRA()
+															var iteration = document.getElementById('rracount').value;
+															iteration = parseInt(iteration)
+													}
+  		 	       $('#labelsettings').addClass('ui-disabled');
+  		 	       $('#settings').addClass('ui-disabled');
+  		 	       $('#settings').selectmenu();
+  		 	       $('#settings').selectmenu('refresh', true);
+  		 	       $('#loadsettingsbtn').addClass('ui-disabled');
+  		 	       $('#delsettingsbtn').addClass('ui-disabled');
+  		 	       $('#labelstep').addClass('ui-disabled');
+  		 	       $('#step').addClass('ui-disabled');
+  		 	       $('#step').selectmenu();
+  		 	       $('#step').selectmenu('refresh', true);
+  		 	       $('#labelstart').addClass('ui-disabled');
+  		 	       $('#start').addClass('ui-disabled');
+  		 	       $('#labeldsname').addClass('ui-disabled');
+  		 	       $('#dsname').addClass('ui-disabled');
+  		 	       $('#dsname').selectmenu();
+  		 	       $('#dsname').selectmenu('refresh', true);
+  		 	       $('#labelheartbeat').addClass('ui-disabled');
+  		 	       $('#heartbeat').addClass('ui-disabled');
+  		 	       $('#labelrra1').addClass('ui-disabled');
+  		 	       $('#labelcf1').addClass('ui-disabled');
+  		 	       $('#cf1').addClass('ui-disabled');
+  		 	       $('#cf1').selectmenu();
+  		 	       $('#cf1').selectmenu('refresh', true);
+  		 	       $('#labelxff1').addClass('ui-disabled');
+  		 	       $('#xff1').addClass('ui-disabled');
+  		 	       $('#labelstep1').addClass('ui-disabled');
+  		 	       $('#step1').addClass('ui-disabled');
+  		 	       $('#labelrows1').addClass('ui-disabled');
+  		 	       $('#rows1').addClass('ui-disabled');
+						   $('#delrrabtn').addClass('ui-disabled');
+							 $('#addrrabtn').addClass('ui-disabled');
+							 $('#savedbsettings').addClass('ui-disabled');
+							 $('#labelsavedbsettings').addClass('ui-disabled');
+							 $('#savedbsettingsname').addClass('ui-disabled');
+							 // Recreate JQUERY styles
+							 $("#main_form").trigger('create');
+  		 	     }
+ 		  	     if ( document.main_form.dbsettingscustom.checked == true ) {
+  		 	       $('#labelsettings').removeClass('ui-disabled');
+  		 	       $('#settings').removeClass('ui-disabled');
+  		 	       $('#settings').selectmenu();
+  		 	       $('#settings').selectmenu('refresh', true);
+  		 	       $('#loadsettingsbtn').removeClass('ui-disabled');
+  		 	       $('#delsettingsbtn').removeClass('ui-disabled');
+  		 	       $('#labelstep').removeClass('ui-disabled');
+  		 	       $('#step').removeClass('ui-disabled');
+  		 	       $('#step').selectmenu();
+  		 	       $('#step').selectmenu('refresh', true);
+  		 	       $('#labelstart').removeClass('ui-disabled');
+  		 	       $('#start').removeClass('ui-disabled');
+  		 	       $('#labeldsname').removeClass('ui-disabled');
+  		 	       $('#dsname').removeClass('ui-disabled');
+  		 	       $('#dsname').selectmenu();
+  		 	       $('#dsname').selectmenu('refresh', true);
+  		 	       $('#labelheartbeat').removeClass('ui-disabled');
+  		 	       $('#heartbeat').removeClass('ui-disabled');
+  		 	       $('#labelrra1').removeClass('ui-disabled');
+  		 	       $('#labelcf1').removeClass('ui-disabled');
+  		 	       $('#cf1').removeClass('ui-disabled');
+  		 	       $('#cf1').selectmenu();
+  		 	       $('#cf1').selectmenu('refresh', true);
+  		 	       $('#labelxff1').removeClass('ui-disabled');
+  		 	       $('#xff1').removeClass('ui-disabled');
+  		 	       $('#labelstep1').removeClass('ui-disabled');
+  		 	       $('#step1').removeClass('ui-disabled');
+  		 	       $('#labelrows1').removeClass('ui-disabled');
+  		 	       $('#rows1').removeClass('ui-disabled');
+							 $('#addrrabtn').removeClass('ui-disabled');
+							 $('#savedbsettings').removeClass('ui-disabled');
+							 $('#labelsavedbsettings').removeClass('ui-disabled');
+ 		  	     		if ( document.main_form.savedbsettings.checked == true ) {
+							 		$('#savedbsettingsname').removeClass('ui-disabled');
+								} else {
+							 		$('#savedbsettingsname').addClass('ui-disabled');
+								}
+								// Recreate JQUERY styles
+								$("#main_form").trigger('create');
+  		 	     }
+										}
+										// Diable Del-Button if needed at onLoad
+										DisableDelButton();
+										// Add one more rra
+										function AddRRA()
+										{
+											// Total number of miniservers
+											var iteration = document.getElementById('rracount').value;
+											iteration = parseInt(iteration)
+											iteration += 1;
+											document.getElementById("rracount").value = iteration;
+
+											var tbl = document.getElementById('rrdtable');
+											var lastRow = tbl.rows.length;
+											var row = tbl.insertRow(lastRow);
+
+											// Add cells
+											var cellRight = row.insertCell(0);
+											cellRight.innerHTML = '<label id="labelrra' + iteration + '">' + iteration + '. RRA:</label>'
+											var cellRight = row.insertCell(1);
+											cellRight.innerHTML = '<table border=0><tr><td width="5%">CF:</td><td width="20%"><select id="cf' + iteration + '" name="cf' + iteration + '" data-mini="true" data-native-menu="false"><option value="AVERAGE">AVERAGE</option><option value="MIN">MIN</option><option value="MAX">MAX</option><option value="LAST">LAST</option></select></td><td width="5%">XFF:</td><td width="20%"><input id="xff' + iteration + '" name="xff' + iteration + '" type="text" data-validation="number" class="textfield" value="" data-validation-allowing="float" data-validation-optional="true" data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für XFF (' + iteration + '. RRA) ein."></td><td width="5%">Step:</td><td width="20%"><input id="step' + iteration + '" name="step' + iteration + '" type="text" data-validation="number" class="textfield" value="" data-validation-optional="true" data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für Step (' + iteration + '. RRA) ein."></td><td width="5%">Rows:</td><td width="20%"><input id="rows' + iteration + '" name="rows' + iteration + '" type="text" data-validation="number" class="textfield" value="" data-validation-optional="true" data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für Rows (' + iteration + '. RRA) ein."></td></tr></table>'
+											var cellRight = row.insertCell(2);
+											cellRight.innerHTML = ''
+											var cellRight = row.insertCell(3);
+											cellRight.innerHTML = ''
+
+											// Disable Delete-Button if needed
+											DisableDelButton();
+
+											// Reinit Validator
+											 var $messages = $('#form-error-message');
+												$.validate({
+													modules : 'security',
+													errorMessagePosition : $messages,
+												});
+
+											// Recreate JQUERY styles
+											$("#main_form").trigger('create');
+
+										}
+
+										function DelRRA()
+										{
+											// Total number of RRAs
+											var iteration = document.getElementById('rracount').value;
+											iteration = iteration-1;
+											document.getElementById("rracount").value = iteration;
+
+											// Del 1. row
+											var tbl = document.getElementById('rrdtable');
+											var lastRow = tbl.rows.length;
+											var row = tbl.deleteRow(-1);
+
+											// Disable Delete-Button if needed
+											DisableDelButton();
+
+											// Recreate JQUERY styles
+											$("#main_form").trigger('create');
+										}
+
+										function DisableDelButton()
+										{
+											var iteration = document.getElementById('rracount').value;
+											if (iteration < 2)
+											{
+												$('#delrrabtn').addClass('ui-disabled');
+											}
+											else
+											{
+												$('#delrrabtn').removeClass('ui-disabled');
+											}
+										}
+
+										// Load settings
+										function LoadSettings() {
+										//url = './addstat.cgi?load=1&loxonename=' + $('#loxonename').val();
+										//window.open(url);
+										}
+       		</script>

@@ -1,0 +1,34 @@
+									<div data-role="navbar">
+										<ul>
+											<li><a href="./index.cgi" class="ui-btn-active">Statistiken</a></li>
+											<li><a href="./import.cgi">Import</a></li>
+											<li><a href="./charts.cgi">Charts</a></li>
+											<li><a href="./indexes.cgi">Indexes</a></li>
+ 										</ul>
+									</div>
+
+									<br/>
+									<table border=0 width="80%">
+									<tr>
+										<td width="20%" style="vertical-align:top"><a id="btnaddstat" data-role="button" data-inline="true" data-mini="true" data-icon="plus" href="./addstat.cgi">Statistik hinzufügen</a></td>
+										<td width="10%">&nbsp;</td>
+										<td width="70%" style="vertical-align:middle"><form><input id="filterTable-input" data-type="search"></form></td>
+									</tr>
+									</table>
+									<br/>
+
+									<table data-role="table" data-mode="columntoggle" data-filter="true" data-input="#filterTable-input" class="ui-body-d ui-shadow table-stripe ui-responsive" data-column-btn-text="Zeige Spalten">
+										<thead>
+											<tr class="ui-bar-d">
+												<th data-priority="6">Nr.</th>
+												<th data-priority="4">Beschreibung</th>
+												<th data-priority="5">Loxone-Bezeichnung</th>
+												<th data-priority="3">Miniserver</th>
+												<th data-priority="2">Status</th>
+												<th data-priority="3">Optionen</th>
+											</tr>
+										</thead>
+										<tbody>
+											<!--$ptablerows-->
+										</tbody>
+									</table>

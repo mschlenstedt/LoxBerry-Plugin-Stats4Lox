@@ -1,0 +1,260 @@
+									<form method="post" data-ajax="false" name="main_form" id="main_form" action="./addstat.cgi">
+										<input type="hidden" name="saveformdata" value="1">
+											<div class="form-group">
+												<input id="rracount" type="hidden" name="rracount" value="<!--$rracount-->">
+												<table id="rrdtable" class="formtable" border="0" width="100%" cellpadding="10">
+													<tr>
+														<td colspan=4 width="75%" valign="middle">
+														Jeder Messwert, der als Statistik erfasst werden soll, wird in eine eigene Datenbank geschrieben. Wir verwenden hierzu sogenannte Round-Robin-Datenbanken
+														(RRD). Wenn Du Dich nicht mit RRD-Datenbanken auskennst, solltest Du die Standardvorgaben verwenden.
+														</td>
+													</tr>
+													<tr>
+														<td width="25%">
+															<label id="labelloxonename">Loxone Bezeichnung:</label>
+														</td>
+														<td width="50%">
+															<input id="loxonename" name="loxonename" type="text" class="textfield" value="<!--$loxonename-->">
+														</td>
+														<td width="5%" valign="middle">
+															&nbsp;
+														</td>
+														<td width="20%">
+															<font size="-1">Exakter Name des Loxone-(Status-)Bausteins oder -Ausgangs</font>
+														</td>
+													</tr>
+													<tr>
+														<td width="25%">
+															<label id="labelminiserver">Miniserver:</label>
+														</td>
+														<td width="50%">
+															<select id="miniserver" name="miniserver" data-mini="true" data-native-menu="true">
+																<!--$msselectmenu-->
+															</select>
+														</td>
+														<td width="5%" valign="middle">
+															&nbsp;
+														</td>
+														<td width="20%">
+															<font size="-1">Der Miniserver, von dem der Baustein/Ausgang abgerufen werden muss.</font>
+														</td>
+													</tr>
+													<tr>
+														<td width="25%">
+															<label id="labelpname">Beschreibung:</label>
+														</td>
+														<td width="50%">
+															<input id="description" name="description" type="text" class="textfield" value="<!--$description-->">
+														</td>
+														<td width="5%" valign="middle">
+															&nbsp;
+														</td>
+														<td width="20%">
+															&nbsp;
+														</td>
+													</tr>
+													<tr>
+														<td width="25%">
+															<label id="labelmin">Gültige Werte:</label>
+														</td>
+														<td width="50%">
+															<table border=0>
+																<tr>
+																	<td width="10%">
+																	Min:
+																	</td>
+																	<td width=40%>	
+																	<input id="min" name="min" type="text" data-validation="number" class="textfield" value="<!--$min-->" 
+																	data-validation-allowing="float,negative" data-validation-optional="true"
+																	data-validation-error-msg="* Bitte geben Sie einen gültigen Minimalwert ein.">
+																	</td>
+																	<td width="10%">
+																	Max:
+																	</td>
+																	<td width=40%>	
+																	<input id="max" name="max" type="text" data-validation="number" class="textfield" value="<!--$max-->" 
+																	data-validation-allowing="float,negative" data-validation-optional="true"
+																	data-validation-error-msg="* Bitte geben Sie einen gültigen Maximalwert ein.">
+																	</td>
+																</tr>
+															</table>	
+														</td>
+														<td width="5%" valign="middle">
+															&nbsp;
+														</td>
+														<td width="20%">
+															<font size="-1">Werte außerhalb dieses Bereichs werden als ungültig markiert. Leer lassen zur Deaktivierung.</font>
+														</td>
+													</tr>
+													<tr>
+														<td width="25%">
+															<label id="labelstationtyp">Datenbankeinstellungen:</label>
+														</td>
+														<td width="50%">
+															<fieldset data-role="controlgroup">
+															<input onclick="disable()" type="radio" name="dbsettings" id="dbsettingsdefault" value="default" <!--$checkeddbsettings1-->>
+															<label for="dbsettingsdefault">Standardvorgaben</label>
+															<input onclick="disable()" type="radio" name="dbsettings" id="dbsettingscustom" value="custom" <!--$checkeddbsettings2-->>
+															<label for="dbsettingscustom">Expertenmodus</label>
+															</fieldset>
+														</td>
+														<td width="5%" valign="middle">
+															&nbsp;
+														</td>
+														<td width="20%">
+															<font size="-1">Mit den Standardeinstellugnen hat jede Datenbank eine feste Größe von ca. 800 kB. Die höchste Auflösung ist 5 Minuten.</font>
+														</td>
+													</tr>
+													<tr>
+														<td width="25%">
+															<label id="labelsettings">Vorgaben:</label>
+														</td>
+														<td width="50%">
+															<table border=0>
+															<tr>
+															<td>
+															<select id="settings" name="settings" data-mini="true" data-native-menu="true">
+																<!--$settingsselectmenu-->
+															</select>
+															</td>
+															<td>
+															<a href="#" id="loadsettingsbtn" onClick="LoadSettings();return false;"data-role="button" data-mini="true" data-inline="true">Laden</a>
+															</td>
+															<td>
+															<a href="#" id="delsettingsbtn" onClick="DelSettings();return false;"data-role="button" data-mini="true" data-inline="true">L&ouml;schen</a>
+															</td>
+															</tr>
+															</table>
+														</td>
+														<td width="5%" valign="middle">
+															&nbsp;
+														</td>
+														<td width="20%">
+															&nbsp;
+														</td>
+													</tr>
+													<tr>
+														<td width="25%">
+															<label id="labelstep">Step (Sek.):</label>
+														</td>
+														<td width="50%">
+															<select id="step" name="step" data-mini="true" data-native-menu="true">
+																<option value="60" <!--$selectedstep1-->>60 (1 Min.)</option>
+																<option value="180" <!--$selectedstep2-->>180 (3 Min.)</option>
+																<option value="300" <!--$selectedstep3-->>300 (5 Min.)</option>
+																<option value="600" <!--$selectedstep4-->>600 (10 Min.)</option>
+																<option value="900" <!--$selectedstep5-->>900 (15 Min.)</option>
+																<option value="1800" <!--$selectedstep6-->>1800 (30 Min.)</option>
+																<option value="3600" <!--$selectedstep7-->>3600 (1 Stunde)</option>
+																<option value="86400" <!--$selectedstep8-->>86400 (1 Tag)</option>
+															</select>
+														</td>
+														<td width="5%" valign="middle">
+															&nbsp;
+														</td>
+														<td width="20%">
+															&nbsp;
+														</td>
+													</tr>
+													<tr>
+														<td width="25%">
+															<label id="labelstart">Start:</label>
+														</td>
+														<td width="50%">
+															<input id="start" name="start" type="text" data-validation="alphanumeric" data-validation-allowing="-+" data-validation-optional="true"
+															data-validation-error-msg="* Der Startwert darf nur aus alphanumerischen Zahlen und +/- bestehen." class="textfield" value="<!--$start-->">
+														</td>
+														<td width="5%" valign="middle">
+															&nbsp;
+														</td>
+														<td width="20%">
+															&nbsp;
+														</td>
+													</tr>
+													<tr>
+														<td width="25%">
+															<label id="labeldsname">DS-Name:</label>
+														</td>
+														<td width="50%">
+															<select id="dsname" name="dsname" data-mini="true" data-native-menu="true">
+																<option value="GAUGE" <!--$selecteddsname1-->>GAUGE</option>
+																<option value="COUNTER" <!--$selecteddsname2-->>COUNTER</option>
+																<option value="DCOUNTER" <!--$selecteddsname3-->>DCOUNTER</option>
+																<option value="DERIVE" <!--$selecteddsname4-->>DERIVE</option>
+																<option value="DDERIVE" <!--$selecteddsname5-->>DDERIVE</option>
+																<option value="ABSOLUTE" <!--$selecteddsname6-->>ABSOLUTE</option>
+															</select>
+														</td>
+														<td width="5%" valign="middle">
+															&nbsp;
+														</td>
+														<td width="20%">
+															&nbsp;
+														</td>
+													</tr>
+													<tr>
+														<td width="25%">
+															<label id="labelheartbeat">Heartbeat (Sek.):</label>
+														</td>
+														<td width="50%">
+															<input id="heartbeat" name="heartbeat" type="text" data-validation="alphanumeric" data-validation-optional="true"
+															data-validation-error-msg="* Der Heartbeat darf nur aus alphanumerischen Zahlen bestehen."	class="textfield" value="<!--$heartbeat-->">
+														</td>
+														<td width="5%" valign="middle">
+															&nbsp;
+														</td>
+														<td width="20%">
+															&nbsp;
+														</td>
+													</tr>
+													<tr>
+														<td width="25%">
+															<label id="labelrra1">1. RRA:</label>
+														</td>
+														<td width="50%">
+														<table border=0>
+															<tr>
+																<td width="5%">
+																	<label id="labelcf1">CF:</label>
+																</td>
+																<td width="20%">
+																<select id="cf1" name="cf1" data-mini="true" data-native-menu="true">
+																	<option value="AVERAGE" <!--$selectedcf11-->>AVERAGE</option>
+																	<option value="MIN" <!--$selectedcf12-->>MIN</option>
+																	<option value="MAX" <!--$selectedcf13-->>MAX</option>
+																	<option value="LAST" <!--$selectedcf14-->>LAST</option>
+																</select>
+																</td>
+																<td width="5%">
+																	<label id="labelxff1">XFF:</label>
+																</td>
+																<td width="20%">
+																	<input id="xff1" name="xff1" type="text" data-validation="number" class="textfield" value="<!--$xff1-->" 
+																	data-validation-allowing="float" data-validation-optional="true"
+																	data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für XFF (1. RRA) ein.">
+																</td>
+																<td width="5%">
+																	<label id="labelstep1">Step:</label>
+																</td>
+																<td width="20%">
+																	<input id="step1" name="step1" type="text" data-validation="number" class="textfield" value="<!--$step1-->" 
+																	data-validation-optional="true"
+																	data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für Step (1. RRA) ein.">
+																</td>
+																<td width="5%">
+																	<label id="labelrows1">Rows:</label>
+																</td>
+																<td width="20%">
+																	<input id="rows1" name="rows1" type="text" data-validation="number" class="textfield" value="<!--$rows1-->" 
+																	data-validation-optional="true"
+																	data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für Rows (1. RRA) ein.">
+																</td>
+															</tr>
+														</table>
+														</td>
+														<td width="5%" valign="middle">
+															&nbsp;
+														</td>
+														<td width="20%">
+															&nbsp;
+														</td>

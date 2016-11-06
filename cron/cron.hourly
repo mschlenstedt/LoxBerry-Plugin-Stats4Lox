@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Fetch data
+if [ -x REPLACEINSTALLFOLDER/webfrontend/cgi/plugins/REPLACEFOLDERNAME/bin/fetch.pl ]
+then
+  cd REPLACEINSTALLFOLDER/webfrontend/cgi/plugins/REPLACEFOLDERNAME/bin/
+  /usr/bin/perl fetch.pl -step 3600
+fi
