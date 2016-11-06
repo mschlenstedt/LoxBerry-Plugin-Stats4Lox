@@ -92,6 +92,7 @@ our $xmlstatuscode;
 our @data;
 our @fields;
 our @fields1;
+our @fields2;
 
 
 foreach (@data){
@@ -126,9 +127,9 @@ foreach (@data){
 	# Use Cloud DNS?
 	if ($miniserverclouddns) {
 		$output = qx($home/bin/showclouddns.pl $miniservermac);
-		@fields = split(/:/,$output);
-		$miniserverip   =  @fields[0];
-		$miniserverport = @fields[1];
+		@fields2 = split(/:/,$output);
+		$miniserverip   =  @fields2[0];
+		$miniserverport = @fields2[1];
 	}
 
 	# Fetch data
