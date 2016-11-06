@@ -116,7 +116,7 @@ if ($lang eq "") {
 }
 
 # If there's no language phrases file for choosed language, use german as default
-if (!-e "$installfolder/templates/plugins/$lang/language.dat") {
+if (!-e "$installfolder/templates/plugins/$psubfolder/$lang/language.dat") {
   $lang = "de";
 }
 
@@ -189,9 +189,10 @@ open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
     else {
       $ptablerows = $ptablerows . "<img src='/plugins/$psubfolder/images/icons/statusgreen.png' alt='" . $phrase->param("TXT0020") . "' title='" . $phrase->param("TXT0021") . "'></td>";
     }
-    $ptablerows = $ptablerows . "<td><a href='./index.cgi?do=pause&db=$dbname'><img src='/plugins/$psubfolder/images/icons/pause.png' alt='" . $phrase->param("TXT0018") . "'></a>";
+    $ptablerows = $ptablerows . "<td style='vertical-align:middle'><a href='./index.cgi?do=pause&db=$dbname'><img src='/plugins/$psubfolder/images/icons/pause.png' alt='" . $phrase->param("TXT0018") . "'></a>";
     $ptablerows = $ptablerows . "&nbsp;<a href='./index.cgi?do=play&db=$dbname'><img src='/plugins/$psubfolder/images/icons/play.png' alt='" . $phrase->param("TXT0022") . "'></a>";
-    $ptablerows = $ptablerows . "&nbsp;<a href='./index.cgi?do=info&db=$dbname'><img src='/plugins/$psubfolder/images/icons/info.png' alt='" . $phrase->param("TXT0023") . "'></a>";
+    $ptablerows = $ptablerows . "&nbsp;<a href='./dbinfo.cgi?db=$dbname'><img src='/plugins/$psubfolder/images/icons/info.png' alt='" . $phrase->param("TXT0023") . "'></a>";
+    $ptablerows = $ptablerows . "&nbsp;<a href='./quickchart.cgi?db=$dbname'><img src='/plugins/$psubfolder/images/icons/chart.png' alt='" . $phrase->param("TXT0027") . "'></a>";
     $ptablerows = $ptablerows . "&nbsp;<a href='./index.cgi?do=import&db=$dbname'><img src='/plugins/$psubfolder/images/icons/import.png' alt='" . $phrase->param("TXT0024") . "'></a>";
     $ptablerows = $ptablerows . "&nbsp;<a href='./index.cgi?do=export&db=$dbname'><img src='/plugins/$psubfolder/images/icons/export.png' alt='" . $phrase->param("TXT0025") . "'></a>";
     $ptablerows = $ptablerows . "&nbsp;<a href='./index.cgi?do=config&db=$dbname'><img src='/plugins/$psubfolder/images/icons/config.png' alt='" . $phrase->param("TXT0026") . "'></a>";
