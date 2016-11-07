@@ -183,6 +183,29 @@ foreach (@data){
 		&log;
 	}
 
+	# Reset status if needed (from red to green)
+	if (@fields[7] eq 0) {
+	open(F,"+<$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could not open databases.dat: $!";
+	  @data = <F>;
+	  seek(F,0,0);
+	  truncate(F,0);
+	  foreach (@data){
+	    s/[\n\r]//g;
+	    # Comments
+	    if ($_ =~ /^\s*#.*/) {
+	      print F "$_\n";
+	      next;
+	    }
+	    @fields1 = split(/\|/);
+	    if (@fields1[0] eq $db) {
+	      print F "@fields1[0]|@fields1[1]|@fields1[2]|@fields1[3]|@fields1[4]|@fields1[5]|@fields1[6]|2\n";
+	    } else {
+	      print F "$_\n";
+	    }
+	  }
+	close (F);
+	}
+
 	# Wait 1 sec. for next grep (to let Miniserver recover himself :-)
 	sleep 1;
 
@@ -236,8 +259,6 @@ sub error {
         next;
       }
       @fields1 = split(/\|/);
-	print "Feld @fields1[0]";
-	print "DB: $db";
       if (@fields1[0] eq $db) {
         print F "@fields1[0]|@fields1[1]|@fields1[2]|@fields1[3]|@fields1[4]|@fields1[5]|@fields1[6]|0\n";
       } else {
