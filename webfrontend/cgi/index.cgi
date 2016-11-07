@@ -183,7 +183,7 @@ open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
     if ($status eq "0") {
       $ptablerows = $ptablerows . "<img src='/plugins/$psubfolder/images/icons/statusred.png' alt='" . $phrase->param("TXT0016") . "' title='" . $phrase->param("TXT0017") . "'></td>";
     }
-    if ($status eq "1") {
+    elsif ($status eq "1") {
       $ptablerows = $ptablerows . "<img src='/plugins/$psubfolder/images/icons/statusyellow.png' alt='" . $phrase->param("TXT0018") . "' title='" . $phrase->param("TXT0019") . "'></td>";
     }
     else {
