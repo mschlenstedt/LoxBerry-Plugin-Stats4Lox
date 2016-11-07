@@ -516,18 +516,18 @@ sub save
 	# Standards - see suggestions from https://www.loxforum.com/forum/german/software-konfiguration-programm-und-visualisierung/61081-loxberry-statistik-plugin-diskussion?p=61470#post61470
 	} else {
 		our $command = "$installfolder/data/plugins/$psubfolder/databases/$dbfilename.rrd --start 1230768000 --step 300 DS:value:GAUGE:3900:$min:$max ";
-		$command = $command . "RRA:AVERAGE:0,08:1:8928 ";
-		$command = $command . "RRA:AVERAGE:0,08:3:8832 ";
-		$command = $command . "RRA:AVERAGE:0,08:12:8760 ";
-		$command = $command . "RRA:AVERAGE:0,08:288:7305 ";
-		$command = $command . "RRA:MAX:0,08:1:8928 ";
-		$command = $command . "RRA:MAX:0,08:3:8832 ";
-		$command = $command . "RRA:MAX:0,08:12:8760 ";
-		$command = $command . "RRA:MAX:0,08:288:7305 ";
-		$command = $command . "RRA:MIN:0,08:1:8928 ";
-		$command = $command . "RRA:MIN:0,08:3:8832 ";
-		$command = $command . "RRA:MIN:0,08:12:8760 ";
-		$command = $command . "RRA:MIN:0,08:288:7305 ";
+		$command = $command . "RRA:AVERAGE:0.08:1:8928 ";
+		$command = $command . "RRA:AVERAGE:0.08:3:8832 ";
+		$command = $command . "RRA:AVERAGE:0.08:12:8760 ";
+		$command = $command . "RRA:AVERAGE:0.08:288:7305 ";
+		$command = $command . "RRA:MAX:0.08:1:8928 ";
+		$command = $command . "RRA:MAX:0.08:3:8832 ";
+		$command = $command . "RRA:MAX:0.08:12:8760 ";
+		$command = $command . "RRA:MAX:0.08:288:7305 ";
+		$command = $command . "RRA:MIN:0.08:1:8928 ";
+		$command = $command . "RRA:MIN:0.08:3:8832 ";
+		$command = $command . "RRA:MIN:0.08:12:8760 ";
+		$command = $command . "RRA:MIN:0.08:288:7305 ";
 	}
 
 	$command = unquotemeta($command);
