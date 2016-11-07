@@ -1,3 +1,4 @@
 # Install additional packages
 rrdtool
 rrdcached
+libstring-escape-perl
