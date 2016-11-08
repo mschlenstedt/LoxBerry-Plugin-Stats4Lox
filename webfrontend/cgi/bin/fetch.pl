@@ -171,7 +171,7 @@ foreach (@data){
 	# Filter units
 	$value = $xml->{value};
 	$value =~ s/^([\d\.]+).*/$1/g;
-	if (-S "/tmp/rrdd.sock") {
+	if (-S "/var/run/rrdcached.sock") {
 		$output = qx(/usr/bin/rrdtool update -d /var/run/rrdcached.sock $installfolder/data/plugins/$psubfolder/databases/@fields[0].rrd N:$value);
 	} else {
 		$logmessage = "<WARN> RRDCaching Daemon (rrdcached) seems not to run. Writing values directly to disc."; 
