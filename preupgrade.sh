@@ -22,7 +22,7 @@ echo "<INFO> Backing up existing log files"
 cp -p -v -r $ARGV5/log/plugins/$ARGV3/ /tmp/$ARGV1\_upgrade/log
 
 echo "<INFO> Backing up existing data files"
-cp -p -v -r $ARGV5/log/plugins/$ARGV3/ /tmp/$ARGV1\_upgrade/data
+cp -p -v -r $ARGV5/data/plugins/$ARGV3/ /tmp/$ARGV1\_upgrade/data
 
 # Exit with Status 0
 exit 0
