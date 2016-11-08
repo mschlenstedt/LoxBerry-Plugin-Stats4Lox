@@ -48,6 +48,10 @@ ARGV5=$5 # Fifth argument is Base folder of LoxBerry
 /bin/sed -i "s:REPLACEFOLDERNAME:$ARGV3:g" $ARGV5/system/cron/cron.daily/$ARGV2
 /bin/sed -i "s:REPLACEINSTALLFOLDER:$ARGV5:g" $ARGV5/system/cron/cron.daily/$ARGV2
 
+if [ ! -d "$ARGV5/data/plugins/$ARGV3/databases" ]; then
+  mkdir "$ARGV5/data/plugins/$ARGV3/databases"
+fi
+
 echo "**********************************************************"
 echo "*     Please reboot your LoxBerry after installation     *"
 echo "* Bitte starte Deinen LoxBerry neu nach der Installation *"
