@@ -48,14 +48,14 @@ our $languagefile;
 our $version;
 our $home = File::HomeDir->my_home;
 our $db;
-our §output;
+our $output;
 
 ##########################################################################
 # Read Settings
 ##########################################################################
 
 # Version of this script
-$version = "0.0.1";
+$version = "0.0.2";
 
 # Figure out in which subfolder we are installed
 our $psubfolder = abs_path($0);
