@@ -15,6 +15,8 @@ mkdir -p /tmp/$ARGV1\_upgrade/data
 
 echo "<INFO> Backing up existing config files"
 cp -p -v -r $ARGV5/config/plugins/$ARGV3/ /tmp/$ARGV1\_upgrade/config
+# Do not back up rrdcached config
+rm /tmp/$ARGV1\_upgrade/config/$ARGV3/rrdcached
 
 echo "<INFO> Backing up existing log files"
 cp -p -v -r $ARGV5/log/plugins/$ARGV3/ /tmp/$ARGV1\_upgrade/log
