@@ -15,7 +15,7 @@ fi
 if [ ! -L /etc/default/rrdcached ]; then
   mv /etc/default/rrdcached /etc/default/rrdcached.old
   ln -s REPLACEINSTALLFOLDER/config/plugins/REPLACEFOLDERNAME/rrdcached /etc/default/rrdcached
-  /etc/init.d/rrdcached restart
+  /usr/sbin/service rrdcached restart
 fi
 
 exit 0
