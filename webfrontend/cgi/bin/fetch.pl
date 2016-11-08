@@ -38,7 +38,7 @@ use Cwd 'abs_path';
 ##########################################################################
 
 # Version of this script
-$version = "0.0.1";
+$version = "0.0.2";
 
 # Figure out in which subfolder we are installed
 our $psubfolder = abs_path($0);
@@ -172,7 +172,7 @@ foreach (@data){
 	$value = $xml->{value};
 	$value =~ s/^([\d\.]+).*/$1/g;
 	if (-S "/tmp/rrdd.sock") {
-		$output = qx(/usr/bin/rrdtool update -d unix:/tmp/rrdd.sock $installfolder/data/plugins/$psubfolder/databases/@fields[0].rrd N:$value);
+		$output = qx(/usr/bin/rrdtool update -d /var/run/rrdcached.sock $installfolder/data/plugins/$psubfolder/databases/@fields[0].rrd N:$value);
 	} else {
 		$logmessage = "<WARN> RRDCaching Daemon (rrdcached) seems not to run. Writing values directly to disc."; 
 		&log;

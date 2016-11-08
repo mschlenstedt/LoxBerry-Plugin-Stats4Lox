@@ -55,7 +55,7 @@ our $output;
 ##########################################################################
 
 # Version of this script
-$version = "0.0.2";
+$version = "0.0.3";
 
 # Figure out in which subfolder we are installed
 our $psubfolder = abs_path($0);
@@ -131,7 +131,11 @@ open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
     }
     @fields = split(/\|/);
     if (@fields[0] eq $db) {
-      $output = qx(/usr/bin/rrdtool graph $installfolder/webfrontend/html/plugins/$psubfolder/charts/@fields[0].png -E -Y -z -d unix:/tmp/rrdd.sock -w 600 -h 300 --start -24h --end now --title \"@fields[2]\" DEF:value=$installfolder/data/plugins/$psubfolder/databases/@fields[0].rrd:value:AVERAGE LINE1:value#ff0000:\"Value AVG\");
+      if (-S "/var/run/rrdcached.sock") {
+        $output = qx(/usr/bin/rrdtool graph $installfolder/webfrontend/html/plugins/$psubfolder/charts/@fields[0].png -E -Y -z -d /var/run/rrdcached.sock -w 600 -h 300 --start -24h --end now --title \"@fields[2]\" DEF:value=$installfolder/data/plugins/$psubfolder/databases/@fields[0].rrd:value:AVERAGE LINE1:value#ff0000:\"Value AVG\");
+      } else {
+        $output = qx(/usr/bin/rrdtool graph $installfolder/webfrontend/html/plugins/$psubfolder/charts/@fields[0].png -E -Y -z -w 600 -h 300 --start -24h --end now --title \"@fields[2]\" DEF:value=$installfolder/data/plugins/$psubfolder/databases/@fields[0].rrd:value:AVERAGE LINE1:value#ff0000:\"Value AVG\");
+      }
     }
   }
 close (F);
