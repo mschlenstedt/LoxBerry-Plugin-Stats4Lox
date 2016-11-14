@@ -74,6 +74,15 @@ foreach (split(/&/,$ENV{'QUERY_STRING'}))
 }
 
 # Set parameters coming in - get over post
+if ( !$query{'script'} ) { 
+	if ( param('script') ) { 
+		our $script = quotemeta(param('script')); 
+	} else { 
+		our $script = 0;
+	} 
+} else { 
+	our $script = quotemeta($query{'script'}); 
+}
 if ( !$query{'saveformdata'} ) { 
 	if ( param('saveformdata') ) { 
 		our $saveformdata = quotemeta(param('saveformdata')); 
@@ -289,9 +298,11 @@ while ($i <= $rracount) {
 	$i++;
 }
 
-# Clean up saveformdata variable
+# Clean up variables
 $saveformdata =~ tr/0-1//cd;
 $saveformdata = substr($saveformdata,0,1);
+$script =~ tr/0-1//cd;
+$script = substr($script,0,1);
 
 # Init Language
 # Clean up lang variable
@@ -516,18 +527,18 @@ sub save
 	# Standards - see suggestions from https://www.loxforum.com/forum/german/software-konfiguration-programm-und-visualisierung/61081-loxberry-statistik-plugin-diskussion?p=61470#post61470
 	} else {
 		our $command = "$installfolder/data/plugins/$psubfolder/databases/$dbfilename.rrd --start 1230768000 --step 300 DS:value:GAUGE:3900:$min:$max ";
-		$command = $command . "RRA:AVERAGE:0,08:1:8928 ";
-		$command = $command . "RRA:AVERAGE:0,08:3:8832 ";
-		$command = $command . "RRA:AVERAGE:0,08:12:8760 ";
-		$command = $command . "RRA:AVERAGE:0,08:288:7305 ";
-		$command = $command . "RRA:MAX:0,08:1:8928 ";
-		$command = $command . "RRA:MAX:0,08:3:8832 ";
-		$command = $command . "RRA:MAX:0,08:12:8760 ";
-		$command = $command . "RRA:MAX:0,08:288:7305 ";
-		$command = $command . "RRA:MIN:0,08:1:8928 ";
-		$command = $command . "RRA:MIN:0,08:3:8832 ";
-		$command = $command . "RRA:MIN:0,08:12:8760 ";
-		$command = $command . "RRA:MIN:0,08:288:7305 ";
+		$command = $command . "RRA:AVERAGE:0.08:1:8928 ";
+		$command = $command . "RRA:AVERAGE:0.08:3:8832 ";
+		$command = $command . "RRA:AVERAGE:0.08:12:8760 ";
+		$command = $command . "RRA:AVERAGE:0.08:288:7305 ";
+		$command = $command . "RRA:MAX:0.08:1:8928 ";
+		$command = $command . "RRA:MAX:0.08:3:8832 ";
+		$command = $command . "RRA:MAX:0.08:12:8760 ";
+		$command = $command . "RRA:MAX:0.08:288:7305 ";
+		$command = $command . "RRA:MIN:0.08:1:8928 ";
+		$command = $command . "RRA:MIN:0.08:3:8832 ";
+		$command = $command . "RRA:MIN:0.08:12:8760 ";
+		$command = $command . "RRA:MIN:0.08:288:7305 ";
 	}
 
 	$command = unquotemeta($command);
@@ -553,20 +564,25 @@ sub save
 	close(F);
 
 	# Print template
-	$template_title = $pphrase->param("TXT0000") . " - " . $pphrase->param("TXT0001");
-	$message = $pphrase->param("TXT0002");
-	$nexturl = "./index.cgi?do=form";
+	if (!$script) {
+		$template_title = $pphrase->param("TXT0000") . " - " . $pphrase->param("TXT0001");
+		$message = $pphrase->param("TXT0002");
+		$nexturl = "./index.cgi?do=form";
 
-	print "Content-Type: text/html\n\n"; 
-	&lbheader;
-	open(F,"$installfolder/templates/system/$lang/success.html") || die "Missing template system/$lang/success.html";
-	while (<F>) 
-	{
-		$_ =~ s/<!--\$(.*?)-->/${$1}/g;
-		print $_;
+		print "Content-Type: text/html\n\n"; 
+		&lbheader;
+		open(F,"$installfolder/templates/system/$lang/success.html") || die "Missing template system/$lang/success.html";
+		while (<F>) 
+		{
+			$_ =~ s/<!--\$(.*?)-->/${$1}/g;
+			print $_;
+		}
+		close(F);
+		&footer;
+	} else {
+		print "Content-Type: text/plain\n\n"; 
+		print "+++OK+++".$pphrase->param("TXT0002");
 	}
-	close(F);
-	&footer;
 	exit;
 		
 }
@@ -577,17 +593,22 @@ sub save
 
 sub error 
 {
-	$template_title = $pphrase->param("TXT0000") . " - " . $pphrase->param("TXT0001");
-	print "Content-Type: text/html\n\n"; 
-	&lbheader;
-	open(F,"$installfolder/templates/system/$lang/error.html") || die "Missing template system/$lang/error.html";
-	while (<F>) 
-	{
-		$_ =~ s/<!--\$(.*?)-->/${$1}/g;
-		print $_;
+	if (!$script) {
+		$template_title = $pphrase->param("TXT0000") . " - " . $pphrase->param("TXT0001");
+		print "Content-Type: text/html\n\n"; 
+		&lbheader;
+		open(F,"$installfolder/templates/system/$lang/error.html") || die "Missing template system/$lang/error.html";
+		while (<F>) 
+		{
+			$_ =~ s/<!--\$(.*?)-->/${$1}/g;
+			print $_;
+		}
+		close(F);
+		&footer;
+	} else {
+		print "Content-Type: text/plain\n\n"; 
+		print "+++ERROR+++".$error;
 	}
-	close(F);
-	&footer;
 	exit;
 }
 
