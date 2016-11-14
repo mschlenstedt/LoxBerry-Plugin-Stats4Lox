@@ -63,7 +63,7 @@ our $db;
 ##########################################################################
 
 # Version of this script
-$version = "0.0.7";
+$version = "0.0.8";
 
 # Figure out in which subfolder we are installed
 our $psubfolder = abs_path($0);
@@ -177,7 +177,9 @@ open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
     }
     @fields = split(/\|/);
     $dbname = @fields[0];
-    $status = @fields[7];
+    open(F,"<$installfolder/data/plugins/$psubfolder/databases/$dbname.status");
+      $status = <F>;
+    close(F);
     $ptablerows = $ptablerows . "<tr><th style='vertical-align:middle'>$i</th><td style='vertical-align:middle'>@fields[2]</td><td style='vertical-align:middle'>@fields[3]</td><td style='text-align:center; vertical-align:middle'>@fields[4]</td>";
     $ptablerows = $ptablerows . "<td style='text-align:left; vertical-align:middle'>";
     if ($status eq "0") {
@@ -226,22 +228,20 @@ if (!$db) {
 }
 
 # Update database
-open(F,"+<$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could not open databases.dat: $!";
+open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could not open databases.dat: $!";
   @data = <F>;
-  seek(F,0,0);
-  truncate(F,0);
   foreach (@data){
     s/[\n\r]//g;
     # Comments
     if ($_ =~ /^\s*#.*/) {
-      print F "$_\n";
       next;
     }
     @fields = split(/\|/);
     if (@fields[0] eq $db || $db eq "all") {
-      print F "@fields[0]|@fields[1]|@fields[2]|@fields[3]|@fields[4]|@fields[5]|@fields[6]|1\n";
-    } else {
-      print F "$_\n";
+	open(F1,">$installfolder/data/plugins/$psubfolder/databases/@fields[0].status");
+	flock(F1, 2);
+	print F1 "1";
+	close(F1);
     }
   }
 close (F);
@@ -263,22 +263,20 @@ if (!$db) {
 }
 
 # Update database
-open(F,"+<$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could not open databases.dat: $!";
+open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could not open databases.dat: $!";
   @data = <F>;
-  seek(F,0,0);
-  truncate(F,0);
   foreach (@data){
     s/[\n\r]//g;
     # Comments
     if ($_ =~ /^\s*#.*/) {
-      print F "$_\n";
       next;
     }
     @fields = split(/\|/);
     if (@fields[0] eq $db || $db eq "all") {
-      print F "@fields[0]|@fields[1]|@fields[2]|@fields[3]|@fields[4]|@fields[5]|@fields[6]|2\n";
-    } else {
-      print F "$_\n";
+	open(F1,">$installfolder/data/plugins/$psubfolder/databases/@fields[0].status");
+	flock(F1, 2);
+	print F1 "2";
+	close(F1);
     }
   }
 close (F);

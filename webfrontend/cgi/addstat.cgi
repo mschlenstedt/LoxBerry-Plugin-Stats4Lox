@@ -510,6 +510,7 @@ sub save
 		if (!-e "$installfolder/data/plugins/$psubfolder/databases/$dbfilename.rrd") {
 			$i = 1;
 			open(F,">$installfolder/config/plugins/$psubfolder/id.dat") or die "Cannot open id.dat: $!";
+				flock(F, 2);
 				print F $lastid;
 			close (F);
 		}
@@ -550,14 +551,22 @@ sub save
 
 	# Register new database
 	open(F,">>$installfolder/config/plugins/$psubfolder/databases.dat") || die "Cannot open database for RRD-databases.";
+		flock(F, 2);
 		binmode F, ':encoding(UTF-8)';
 		$description = Encode::decode( "UTF-8", unquotemeta($description) );
 		$loxonename = Encode::decode( "UTF-8", unquotemeta($loxonename) );
-		print F "$dbfilename|$step|$description|$loxonename|$miniserver|$min|$max|1\n";
+		print F "$dbfilename|$step|$description|$loxonename|$miniserver|$min|$max\n";
+	close(F);
+
+	# Create status file
+	open(F,">$installfolder/data/plugins/$psubfolder/databases/$dbfilename.status") || die "Cannot open status file for RRD-database.";
+	flock(F, 2);
+	print F "1";
 	close(F);
 
 	# Create info file
 	open(F,">$installfolder/data/plugins/$psubfolder/databases/$dbfilename.info") || die "Cannot open info file for RRD-database.";
+	flock(F, 2);
 	print F "/usr/bin/rrdtool create $command 2>&1\n\n";
 	$output = qx(/usr/bin/rrdinfo $installfolder/data/plugins/$psubfolder/databases/$dbfilename.rrd 2>&1);
 	print F $output;

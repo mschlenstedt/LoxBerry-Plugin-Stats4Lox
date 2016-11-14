@@ -93,6 +93,7 @@ our @data;
 our @fields;
 our @fields1;
 our @fields2;
+our $status;
 
 
 foreach (@data){
@@ -109,7 +110,9 @@ foreach (@data){
 	}
 
 	# Skip paused databases
-	if (@fields[7] eq 1) {
+	open(F,"<$installfolder/data/plugins/$psubfolder/databases/@fields[0].status") || die "Cannot open status file for RRD-database.";
+	$status = <F>;
+	if ($status eq 1) {
 		$logmessage = "<INFO> Skipping Statistic ID @fields[0] (@fields[3]) - Database is paused.";
 		&log;
 		next;
@@ -247,25 +250,10 @@ sub error {
   &log;
 
   # Update database
-  open(F,"+<$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could not open databases.dat: $!";
-    @data = <F>;
-    seek(F,0,0);
-    truncate(F,0);
-    foreach (@data){
-      s/[\n\r]//g;
-      # Comments
-      if ($_ =~ /^\s*#.*/) {
-        print F "$_\n";
-        next;
-      }
-      @fields1 = split(/\|/);
-      if (@fields1[0] eq $db) {
-        print F "@fields1[0]|@fields1[1]|@fields1[2]|@fields1[3]|@fields1[4]|@fields1[5]|@fields1[6]|0\n";
-      } else {
-        print F "$_\n";
-      }
-    }
-  close (F);
+  open(F,">$installfolder/data/plugins/$psubfolder/databases/$db.status");
+  flock(F, 2);
+  print F "0";
+  close(F);
 
   return();
 
