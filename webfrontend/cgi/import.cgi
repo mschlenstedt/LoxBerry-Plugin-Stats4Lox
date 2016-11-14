@@ -19,8 +19,9 @@
 # Modules
 ##########################################################################
 
+use CGI;
 use CGI::Carp qw(fatalsToBrowser);
-use CGI qw/:standard/;
+# use CGI qw/:standard/;
 use LWP::UserAgent;
 use String::Escape qw( unquotemeta );
 use Config::Simple;
@@ -33,9 +34,14 @@ use warnings;
 # Christian Import
 use XML::LibXML;
 use File::stat;
+use File::Basename;
 use Time::localtime;
 # Debug
 use Time::HiRes qw/ time sleep /;
+
+# Set maximum file upload to approx. 7 MB
+$CGI::POST_MAX = 1024 * 7000;
+
 
 
 #use strict;
@@ -120,16 +126,20 @@ if (!-e "$installfolder/templates/plugins/$psubfolder/$lang/language.dat") {
 our $planguagefile = "$installfolder/templates/plugins/$psubfolder/$lang/language.dat";
 our $pphrase = new Config::Simple($planguagefile);
 
+# Default file for reading and writing LoxPLAN file
+our $loxconfig_path = "$installfolder/data/plugins/$psubfolder/upload.loxplan";
+
 ##########################################################################
 # Main program
 ##########################################################################
 
-if ($saveformdata) {
+if ($Upload) {
+	saveloxplan();
+	form();
+} elsif ($saveformdata) {
   &save;
-
 } else {
   &form;
-
 }
 
 exit;
@@ -149,8 +159,7 @@ sub form {
 	# Prepare the form
 	
 	# Check if a .LoxPLAN is already available
-	our $loxconfig_path;
-	$loxconfig_path = "$installfolder/data/plugins/$psubfolder/upload.loxplan";
+	
 	
 	if ( -e $loxconfig_path ) {
 		my $loxplan_modified = ctime(stat($loxconfig_path)->mtime);
@@ -160,12 +169,16 @@ sub form {
 		my $upload_message = "Lade deine Loxone Konfiguration hoch. Daraus wird ausgelesen, welche Statistiken du aktuell aktiviert hast.";
 	}
 
+	generate_import_table();
+	
+	
+	
 	# Print the template
 	print "Content-Type: text/html\n\n";
 	
 	$template_title = $pphrase->param("TXT0000") . ": " . $pphrase->param("TXT0001");
 	
-	# Print Template
+	# Print Upload Template
 	&lbheader;
 	open(F,"$installfolder/templates/plugins/$psubfolder/multi/loxplan_uploadform.html") || die "Missing template plugins/$psubfolder/multi/loxplan_uploadform.html";
 	  while (<F>) 
@@ -175,6 +188,16 @@ sub form {
 	  }
 	close(F);
 
+	open(F,"$installfolder/templates/plugins/$psubfolder/multi/import_selection.html") || die "Missing template plugins/$psubfolder/multi/loxplan_uploadform.html";
+	  while (<F>) 
+	  {
+	    $_ =~ s/<!--\$(.*?)-->/${$1}/g;
+	    $_ =~ s/<!--\$(.*?)-->/${$1}/g;
+	    print $_;
+	  }
+	close(F);
+	
+	
 	
 	#	open(F,"$installfolder/templates/plugins/$psubfolder/$lang/addstat_end.html") || die "Missing template plugins/$psubfolder/$lang/addstat_end.html";
 #	  while (<F>) 
@@ -230,6 +253,51 @@ sub save
 	exit;
 		
 }
+
+#####################################################
+# Save Loxplan file
+#####################################################
+
+sub saveloxplan
+{
+	my $filename = $query->param("loxplan-file");
+	
+	if ( !$filename ) {
+		exit;
+	}
+	
+	my $upload_filehandle = $query->upload("loxplan-file");
+	open ( UPLOADFILE, ">$loxconfig_path" ) or die "$!";
+	binmode UPLOADFILE;
+
+	while ( <$upload_filehandle> ) {
+		print UPLOADFILE;
+	}
+	close UPLOADFILE;
+}
+
+#####################################################
+# Generate HTML Import Table
+#####################################################
+
+sub generate_import_table 
+{
+  our htmlout = '
+	  <tr>
+		<td class="tg-yw4l">1W_Aussentemp</td>
+		<td class="tg-yw4l">Außentemperatur</td>
+		<td class="tg-yw4l">Zentral</td>
+		<td class="tg-yw4l">Wetter</td>
+		<td class="tg-yw4l">3</td>
+		<td class="tg-yw4l">-50</td>
+		<td class="tg-yw4l">70</td>
+		<td class="tg-yw4l">Import-Dropdown1</td>
+		<td class="tg-yw4l">Import-Checkbox1</td>
+	  </tr>
+	';
+
+}
+
 
 #####################################################
 # Read LoxPLAN XML
