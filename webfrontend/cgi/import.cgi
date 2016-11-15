@@ -52,6 +52,7 @@ our @query;
 our @fields;
 our @lines;
 my $home = File::HomeDir->my_home;
+our %cfg_mslist;
 
 ##########################################################################
 # Read Settings
@@ -72,6 +73,11 @@ our $clouddnsaddress = $cfg->param("BASE.CLOUDDNS");
 our $curlbin         = $cfg->param("BINARIES.CURL");
 our $grepbin         = $cfg->param("BINARIES.GREP");
 our $awkbin          = $cfg->param("BINARIES.AWK");
+
+# Generate MS table with IP as key
+for (my $msnr = 1; $msnr <= $miniservercount; $msnr++) {
+	$cfg_mslist{$cfg->param("MINISERVER$msnr.IPADDRESS")} = $msnr;
+}
 
 #########################################################################
 # Parameter
@@ -282,20 +288,24 @@ sub saveloxplan
 
 sub generate_import_table 
 {
-  our htmlout = '
-	  <tr>
-		<td class="tg-yw4l">1W_Aussentemp</td>
-		<td class="tg-yw4l">Außentemperatur</td>
-		<td class="tg-yw4l">Zentral</td>
-		<td class="tg-yw4l">Wetter</td>
-		<td class="tg-yw4l">3</td>
-		<td class="tg-yw4l">-50</td>
-		<td class="tg-yw4l">70</td>
-		<td class="tg-yw4l">Import-Dropdown1</td>
-		<td class="tg-yw4l">Import-Checkbox1</td>
-	  </tr>
-	';
 
+foreach my $statsobj (keys %lox_statsobject) {
+	
+	our htmlout = '
+		  <tr>
+			<td class="tg-yw4l">' + $statsobj{Title} + '</td>
+			<td class="tg-yw4l">' + $statsobj{Desc} + '</td>
+			<td class="tg-yw4l">' + $statsobj{Place} + 'Zentral</td>
+			<td class="tg-yw4l">' + $statsobj{Category} + '</td>
+			<td class="tg-yw4l">' + $statsobj{StatsType} + '</td>
+			<td class="tg-yw4l">' + $statsobj{MinVal} + '</td>
+			<td class="tg-yw4l">' + $statsobj{MaxVal} + '</td>
+			<td class="tg-yw4l">Import-Dropdown1</td>
+			<td class="tg-yw4l">Import-Checkbox1</td>
+		  </tr>
+		';
+
+	}
 }
 
 
@@ -375,6 +385,11 @@ sub readloxplan
 		$lox_statsobject{$object->{U}}{Type} = $object->{Type};
 		$lox_statsobject{$object->{U}}{MSName} = $lox_miniserver{$ms_ref}{Title};
 		$lox_statsobject{$object->{U}}{MSIP} = $lox_miniserver{$ms_ref}{IP};
+		$lox_statsobject{$object->{U}}{MSNr} = $cfg_mslist{$lox_miniserver{$ms_ref}{IP}};
+		# Place and Category needs to be checked if set and resolved 
+		$lox_statsobject{$object->{U}}{Category} = $object->getChildrenByLocalName("IoData")[0]{Cr};
+		$lox_statsobject{$object->{U}}{Place} = $object->getChildrenByLocalName("IoData")[0]{Pr};
+		
 		if ($object->{Analog} ne "true") {
 			$lox_statsobject{$object->{U}}{MinVal} = 0;
 			$lox_statsobject{$object->{U}}{MaxVal} = 1;
