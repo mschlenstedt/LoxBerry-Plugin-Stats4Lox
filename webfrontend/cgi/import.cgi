@@ -144,25 +144,7 @@ our $loxconfig_path = "$installfolder/data/plugins/$psubfolder/upload.loxplan";
 our $post = new CGI;
 
 if ( $post->param('Upload') ) {
-	my $upload_filehandle = $post->upload('loxplan-file');
-	if (! $upload_filehandle ) {
-		print STDERR "ERROR: LoxPLAN Upload - Stream filehandle not created.\n";
-		exit (-1);
-	}
-	if (! open(UPLOADFILE, ">$loxconfig_path" ) ) {
-		print STDERR "ERROR: LoxPLAN Upload - cannot open local file handle.\n";
-		exit (-1);
-	}
-	# binmode UPLOADFILE;
-
-	while (<$upload_filehandle>) {
-		print UPLOADFILE "$_";
-	}
-	close $upload_filehandle;
-	close UPLOADFILE;
-
-
-	#saveloxplan();
+	saveloxplan();
 	form();
 	
 } elsif ($saveformdata) {
@@ -302,8 +284,9 @@ sub save
 
 sub saveloxplan
 {
+	# Funktioniert nicht - $upload-filehandle leer...?!
 	my $cgi = new CGI();
-	my $upload_filehandle = $cgi->upload('loxplan-file');
+	my $upload_filehandle = $cgi->upload('loxplan');
 	if (! $upload_filehandle ) {
 		print STDERR "ERROR: LoxPLAN Upload - Stream filehandle not created.\n";
 		exit (-1);
