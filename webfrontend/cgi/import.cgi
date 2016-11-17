@@ -21,7 +21,7 @@
 
 use CGI;
 use CGI::Carp qw(fatalsToBrowser);
-# use CGI qw/:standard/;
+use CGI qw/:standard/;
 use LWP::UserAgent;
 use String::Escape qw( unquotemeta );
 use Config::Simple;
@@ -40,7 +40,7 @@ use Time::localtime;
 use Time::HiRes qw/ time sleep /;
 
 # Set maximum file upload to approx. 7 MB
-$CGI::POST_MAX = 1024 * 7000;
+# $CGI::POST_MAX = 1024 * 10000;
 
 
 
@@ -53,6 +53,7 @@ our @fields;
 our @lines;
 my $home = File::HomeDir->my_home;
 our %cfg_mslist;
+our $upload_message;
 
 ##########################################################################
 # Read Settings
@@ -95,15 +96,16 @@ foreach (split(/&/,$ENV{'QUERY_STRING'}))
 }
 
 # Set parameters coming in - get over post
-if ( !$query{'saveformdata'} ) { 
+  if ( !$query{'saveformdata'} ) { 
 	if ( param('saveformdata') ) { 
 		our $saveformdata = quotemeta(param('saveformdata')); 
 	} else { 
 		our $saveformdata = 0;
 	} 
-} else { 
+  } else { 
 	our $saveformdata = quotemeta($query{'saveformdata'}); 
 }
+
 if ( !$query{'lang'} ) {
 	if ( param('lang') ) {
 		$lang = quotemeta(param('lang'));
@@ -139,9 +141,30 @@ our $loxconfig_path = "$installfolder/data/plugins/$psubfolder/upload.loxplan";
 # Main program
 ##########################################################################
 
-if ($Upload) {
-	saveloxplan();
+our $post = new CGI;
+
+if ( $post->param('Upload') ) {
+	my $upload_filehandle = $post->upload('loxplan-file');
+	if (! $upload_filehandle ) {
+		print STDERR "ERROR: LoxPLAN Upload - Stream filehandle not created.\n";
+		exit (-1);
+	}
+	if (! open(UPLOADFILE, ">$loxconfig_path" ) ) {
+		print STDERR "ERROR: LoxPLAN Upload - cannot open local file handle.\n";
+		exit (-1);
+	}
+	# binmode UPLOADFILE;
+
+	while (<$upload_filehandle>) {
+		print UPLOADFILE "$_";
+	}
+	close $upload_filehandle;
+	close UPLOADFILE;
+
+
+	#saveloxplan();
 	form();
+	
 } elsif ($saveformdata) {
   &save;
 } else {
@@ -170,14 +193,27 @@ sub form {
 	if ( -e $loxconfig_path ) {
 		my $loxplan_modified = ctime(stat($loxconfig_path)->mtime);
 		readloxplan();
-		my $upload_message = "Die aktuell hochgeladene Loxone-Konfiguration ist von $loxplan_modified. Du kannst eine neuere Version hochladen, oder diese verwenden.";
+		$upload_message = "Die aktuell hochgeladene Loxone-Konfiguration ist von $loxplan_modified. Du kannst eine neuere Version hochladen, oder diese verwenden.";
 	} else {
-		my $upload_message = "Lade deine Loxone Konfiguration hoch. Daraus wird ausgelesen, welche Statistiken du aktuell aktiviert hast.";
+		$upload_message = "Lade deine Loxone Konfiguration hoch. Daraus wird ausgelesen, welche Statistiken du aktuell aktiviert hast.";
 	}
 
+	# Read Stat definitions and prepare dropdown string
+	# UNFINISHED
+	our $statdef_dropdown;
+	$statdef_dropdown = '
+		<select name="statdef">
+			<option selected>Standard</option>
+			<option>Definition 1</option>
+			<option>Definition 2</option>
+			<option>Definition 3</option>
+			<option>Definition 4</option>
+		</select>';
+	
+	
+	
 	generate_import_table();
-	
-	
+		
 	
 	# Print the template
 	print "Content-Type: text/html\n\n";
@@ -237,8 +273,8 @@ sub save
 	if ($miniserverclouddns) {
 		$output = qx($home/bin/showclouddns.pl $miniservermac);
 		@fields = split(/:/,$output);
-		$miniserverip   =  @fields[0];
-		$miniserverport = @fields[1];
+		$miniserverip   = $fields[0];
+		$miniserverport = $fields[1];
 	}
 
 	# Print template
@@ -266,22 +302,30 @@ sub save
 
 sub saveloxplan
 {
-	my $filename = $query->param("loxplan-file");
-	
-	if ( !$filename ) {
-		exit;
+	my $cgi = new CGI();
+	my $upload_filehandle = $cgi->upload('loxplan-file');
+	if (! $upload_filehandle ) {
+		print STDERR "ERROR: LoxPLAN Upload - Stream filehandle not created.\n";
+		exit (-1);
 	}
-	
-	my $upload_filehandle = $query->upload("loxplan-file");
-	open ( UPLOADFILE, ">$loxconfig_path" ) or die "$!";
-	binmode UPLOADFILE;
+	if (! open(UPLOADFILE, ">$loxconfig_path" ) ) {
+		print STDERR "ERROR: LoxPLAN Upload - cannot open local file handle.\n";
+		exit (-1);
+	}
+	# binmode UPLOADFILE;
 
-	while ( <$upload_filehandle> ) {
-		print UPLOADFILE;
+	while (<$upload_filehandle>) {
+		print UPLOADFILE "$_";
 	}
+	close $upload_filehandle;
 	close UPLOADFILE;
+	return;
+
 }
 
+
+ 
+ 
 #####################################################
 # Generate HTML Import Table
 #####################################################
@@ -289,21 +333,24 @@ sub saveloxplan
 sub generate_import_table 
 {
 
-foreach my $statsobj (keys %lox_statsobject) {
-	
-	our htmlout = '
-		  <tr>
-			<td class="tg-yw4l">' + $statsobj{Title} + '</td>
-			<td class="tg-yw4l">' + $statsobj{Desc} + '</td>
-			<td class="tg-yw4l">' + $statsobj{Place} + 'Zentral</td>
-			<td class="tg-yw4l">' + $statsobj{Category} + '</td>
-			<td class="tg-yw4l">' + $statsobj{StatsType} + '</td>
-			<td class="tg-yw4l">' + $statsobj{MinVal} + '</td>
-			<td class="tg-yw4l">' + $statsobj{MaxVal} + '</td>
-			<td class="tg-yw4l">Import-Dropdown1</td>
-			<td class="tg-yw4l">Import-Checkbox1</td>
-		  </tr>
-		';
+	foreach my $statsobj (keys %lox_statsobject) {
+		
+		
+		
+		
+		our $htmlout = '
+			  <tr>
+				<td class="tg-yw4l">' + $statsobj{Title} + '</td>
+				<td class="tg-yw4l">' + $statsobj{Desc} + '</td>
+				<td class="tg-yw4l">' + $statsobj{Place} + 'Zentral</td>
+				<td class="tg-yw4l">' + $statsobj{Category} + '</td>
+				<td class="tg-yw4l">' + $statsobj{StatsType} + '</td>
+				<td class="tg-yw4l">' + $statsobj{MinVal} + '</td>
+				<td class="tg-yw4l">' + $statsobj{MaxVal} + '</td>
+				<td class="tg-yw4l">' + $statdef_dropdown + '</td>
+				<td class="tg-yw4l"> <input type="checkbox" name="doimport" value="import"></td>
+			  </tr>
+			';
 
 	}
 }
@@ -387,8 +434,9 @@ sub readloxplan
 		$lox_statsobject{$object->{U}}{MSIP} = $lox_miniserver{$ms_ref}{IP};
 		$lox_statsobject{$object->{U}}{MSNr} = $cfg_mslist{$lox_miniserver{$ms_ref}{IP}};
 		# Place and Category needs to be checked if set and resolved 
-		$lox_statsobject{$object->{U}}{Category} = $object->getChildrenByLocalName("IoData")[0]{Cr};
-		$lox_statsobject{$object->{U}}{Place} = $object->getChildrenByLocalName("IoData")[0]{Pr};
+		# UNFINISHED
+		# $lox_statsobject{$object->{U}}{Category} = $object->getChildrenByLocalName("IoData")[0]{Cr};
+		# $lox_statsobject{$object->{U}}{Place} = $object->getChildrenByLocalName("IoData")[0]{Pr};
 		
 		if ($object->{Analog} ne "true") {
 			$lox_statsobject{$object->{U}}{MinVal} = 0;

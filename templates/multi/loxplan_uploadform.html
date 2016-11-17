@@ -1,12 +1,12 @@
-<table border=0 width="80%">
-	<tr>
-		<form method="post" enctype="multipart/form-data" action="./import.cgi">
-		<td width="70%" style="vertical-align:middle"><input type="file" id="loxplan-file" /></td>
-		<td width="10%">&nbsp;</td>
-		<td width="20%" style="vertical-align:middle"><input type="submit" name="Upload" value="Hochladen" /></td>
-		</form>
-	</tr>
-	<tr>
-		<td colspan="3"><!--$upload_message--></td>
-	</tr>
-</table>
+<form method="post" enctype="multipart/form-data" action="./import.cgi">
+	<table border=0 width="80%">
+		<tr>
+			<td width="70%" style="vertical-align:middle"><input type="file" name="loxplan-file" /></td>
+			<td width="10%">&nbsp;</td>
+			<td width="20%" style="vertical-align:middle"><input type="submit" name="Upload" value="Hochladen" /></td>
+		</tr>
+		<tr>
+			<td colspan="3"><!--$upload_message--></td>
+		</tr>
+	</table>
+</form>
