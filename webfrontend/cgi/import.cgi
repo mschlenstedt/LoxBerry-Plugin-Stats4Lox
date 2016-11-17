@@ -54,6 +54,9 @@ our @lines;
 my $home = File::HomeDir->my_home;
 our %cfg_mslist;
 our $upload_message;
+our $stattable;
+our %lox_statsobject;
+		
 
 ##########################################################################
 # Read Settings
@@ -184,7 +187,7 @@ sub form {
 	# UNFINISHED
 	our $statdef_dropdown;
 	$statdef_dropdown = '
-		<select name="statdef">
+		<select data-mini="true" name="statdef">
 			<option selected>Standard</option>
 			<option>Definition 1</option>
 			<option>Definition 2</option>
@@ -212,18 +215,23 @@ sub form {
 	  }
 	close(F);
 
-	open(F,"$installfolder/templates/plugins/$psubfolder/multi/import_selection.html") || die "Missing template plugins/$psubfolder/multi/loxplan_uploadform.html";
+	# Print table Template
+	
+	open(F,"$installfolder/templates/plugins/$psubfolder/multi/import_selection.html") || die "Missing template plugins/$psubfolder/multi/import_selection.html";
 	  while (<F>) 
 	  {
-	    $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-	    $_ =~ s/<!--\$(.*?)-->/${$1}/g;
+		$_ =~ s/<!--\$(.*?)-->/${$1}/g;
+#	    $_ =~ s/<!--\$(.*?)-->/${$1}/g;
 	    print $_;
 	  }
 	close(F);
 	
 	
 	
-	#	open(F,"$installfolder/templates/plugins/$psubfolder/$lang/addstat_end.html") || die "Missing template plugins/$psubfolder/$lang/addstat_end.html";
+	# print table footer Template
+	
+	
+#	open(F,"$installfolder/templates/plugins/$psubfolder/$lang/addstat_end.html") || die "Missing template plugins/$psubfolder/$lang/addstat_end.html";
 #	  while (<F>) 
 #	  {
 #	    $_ =~ s/<!--\$(.*?)-->/${$1}/g;
@@ -315,26 +323,21 @@ sub saveloxplan
 
 sub generate_import_table 
 {
-
 	foreach my $statsobj (keys %lox_statsobject) {
-		
-		
-		
-		
-		our $htmlout = '
+		# print STDERR $statsobj{Title} . "\n";
+		$statstable .= '
 			  <tr>
-				<td class="tg-yw4l">' + $statsobj{Title} + '</td>
-				<td class="tg-yw4l">' + $statsobj{Desc} + '</td>
-				<td class="tg-yw4l">' + $statsobj{Place} + 'Zentral</td>
-				<td class="tg-yw4l">' + $statsobj{Category} + '</td>
-				<td class="tg-yw4l">' + $statsobj{StatsType} + '</td>
-				<td class="tg-yw4l">' + $statsobj{MinVal} + '</td>
-				<td class="tg-yw4l">' + $statsobj{MaxVal} + '</td>
-				<td class="tg-yw4l">' + $statdef_dropdown + '</td>
-				<td class="tg-yw4l"> <input type="checkbox" name="doimport" value="import"></td>
+				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{Title} . '</td>
+				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{Desc} . '</td>
+				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{Place} . 'Zentral</td>
+				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{Category} . '</td>
+				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{StatsType} . '</td>
+				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{MinVal} . '</td>
+				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{MaxVal} . '</td>
+				<td class="tg-yw4l">' . $statdef_dropdown . '</td>
+				<td class="tg-yw4l"> <input data-mini="true" type="checkbox" name="doimport" value="import"></td>
 			  </tr>
 			';
-
 	}
 }
 
@@ -346,12 +349,11 @@ sub generate_import_table
 sub readloxplan
 {
 
-	our @loxconfig_xml;
-	our %StatTypes;
-	our %lox_miniserver;
-	our %lox_category;
-	our %lox_room;
-	our %lox_statsobject;
+	my @loxconfig_xml;
+	my %StatTypes;
+	my %lox_miniserver;
+	my %lox_category;
+	my %lox_room;
 	
 
 	%StatTypes = ( 	1, "Jede Änderung (max. ein Wert pro Minute)",
@@ -369,6 +371,10 @@ sub readloxplan
 	# Prepare data from LoxPLAN file
 	my $parser = XML::LibXML->new();
 	my $lox_xml = $parser->parse_file($loxconfig_path);
+	if (! $lox_xml) {
+		print STDERR "import.cgi: Cannot parse LoxPLAN XML file.\n";
+		exit(-1);
+	}
 
 	# Read Loxone Miniservers
 	foreach my $miniserver ($lox_xml->findnodes('//C[@Type="LoxLIVE"]')) {
@@ -436,11 +442,13 @@ sub readloxplan
 				$lox_statsobject{$object->{U}}{MaxVal} = "U";
 			}
 		}
+		print STDERR "Object Name: " . $lox_statsobject{$object->{U}}{Title} . "\n";
 	}
 	
 	my $end_run = time();
 	my $run_time = $end_run - $start_run;
 	# print "Job took $run_time seconds\n";
+	return;
 }
 
 #####################################################
