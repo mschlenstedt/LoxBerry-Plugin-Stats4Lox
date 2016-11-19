@@ -20,7 +20,11 @@ $uploadfile =~ s/.*[\/\\](.*)/$1/;
 
 # Path for upload file - clean before upload
 $loxconfig_path = "/tmp/loxplan.xml";
-if (-e $loxconfig_path && !-l $loxconfig_path) {
+if (-l $loxconfig_path) {
+  print STDERR "ERROR: File is symbolic link. Will not overwrite due to security reasons!\n";
+  exit (-1);
+}
+elsif (-e $loxconfig_path) {
   system (rm -f $loxconfig_path);
 }
 
