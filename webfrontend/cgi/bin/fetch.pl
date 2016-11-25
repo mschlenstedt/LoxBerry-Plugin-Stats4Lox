@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 
 # fetch.pl
-# fetches weather data (current and forecast) from Wunderground
 
 # Copyright 2016 Michael Schlenstedt, michael@loxberry.de
 #
@@ -38,7 +37,7 @@ use Cwd 'abs_path';
 ##########################################################################
 
 # Version of this script
-$version = "0.0.2";
+$version = "0.0.3";
 
 # Figure out in which subfolder we are installed
 our $psubfolder = abs_path($0);
@@ -187,26 +186,11 @@ foreach (@data){
 	}
 
 	# Reset status if needed (from red to green)
-	if (@fields[7] eq 0) {
-	open(F,"+<$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could not open databases.dat: $!";
-	  @data = <F>;
-	  seek(F,0,0);
-	  truncate(F,0);
-	  foreach (@data){
-	    s/[\n\r]//g;
-	    # Comments
-	    if ($_ =~ /^\s*#.*/) {
-	      print F "$_\n";
-	      next;
-	    }
-	    @fields1 = split(/\|/);
-	    if (@fields1[0] eq $db) {
-	      print F "@fields1[0]|@fields1[1]|@fields1[2]|@fields1[3]|@fields1[4]|@fields1[5]|@fields1[6]|2\n";
-	    } else {
-	      print F "$_\n";
-	    }
-	  }
-	close (F);
+	if ($status eq 0) {
+		open(F,">$installfolder/data/plugins/$psubfolder/databases/@fields[0].status") || die "Cannot open status file for RRD-database.";
+		flock(F,2);
+		print F "2";
+		close F;
 	}
 
 	# Wait 1 sec. for next grep (to let Miniserver recover himself :-)
