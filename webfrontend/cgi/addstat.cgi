@@ -43,7 +43,7 @@ my $home = File::HomeDir->my_home;
 ##########################################################################
 
 # Version of this script
-$version = "0.0.8";
+$version = "0.0.9";
 
 # Figure out in which subfolder we are installed
 our $psubfolder = abs_path($0);
@@ -73,7 +73,7 @@ foreach (split(/&/,$ENV{'QUERY_STRING'}))
   $query{$namef} = $value;
 }
 
-# Set parameters coming in - get over post
+# Set parameters coming in - get over post - First group needed if we should read settings from db
 if ( !$query{'script'} ) { 
 	if ( param('script') ) { 
 		our $script = quotemeta(param('script')); 
@@ -83,6 +83,76 @@ if ( !$query{'script'} ) {
 } else { 
 	our $script = quotemeta($query{'script'}); 
 }
+if ( !$query{'load'} ) { 
+	if ( param('load') ) { 
+		our $load = quotemeta(param('load')); 
+	} else { 
+		our $load = 0;
+	} 
+} else { 
+	our $load = quotemeta($query{'load'}); 
+}
+if ( !$query{'settings'} ) { 
+	if ( param('settings') ) {
+		our $settings = quotemeta(param('settings'));
+	} else {
+		our $settings = "";
+	}
+} else {
+	our $settings = quotemeta($query{'settings'});
+}
+$script =~ tr/0-1//cd;
+$script = substr($script,0,1);
+$load =~ tr/0-1//cd;
+$load = substr($load,0,1);
+
+# Load settings from database if needed
+if ( ($load || $script) && $settings > 1 ) {
+	# Read values from dbsettings database
+	open(F,"<$installfolder/config/plugins/$psubfolder/dbsettings.dat");
+	@data = <F>;
+	my $found = 0;
+	foreach (@data){
+		s/[\n\r]//g;
+		# Comments
+		if ($_ =~ /^\s*#.*/) {
+      			next;
+    		}
+    		@fields = split(/\|/);
+		if (@fields[0] eq $settings) {
+			$found = 1;
+			$query{'dbsettings'} = "custom";
+			$query{'start'} = @fields[2];
+			$query{'step'} = @fields[3];
+			$query{'dsname'} = @fields[4];
+			$query{'heartbeat'} = @fields[5];
+			$query{'min'} = @fields[6];
+			$query{'max'} = @fields[7];
+			$query{'rracount'} = @fields[8];
+			$i = 1;
+			while ($i <= $query{'rracount'}) {
+				my $field = 9 + ( ($i-1) * 4);
+				$query{"cf$i"} = @fields[$field];
+				$field++;
+				$query{"xff$i"} = @fields[$field];
+				$field++;
+				$query{"step$i"} = @fields[$field];
+				$field++;
+				$query{"rows$i"} = @fields[$field];
+				$i++;
+			}
+		}
+  	}
+	close (F);
+	# Use default values if we cannot foind settings
+	if (!found) {
+		$query{'dbsettings'} = "default";
+		$query{'settings'} = "1";
+		$settings = 1;
+	}
+}
+
+# Set parameters coming in - get over post - Second group
 if ( !$query{'saveformdata'} ) { 
 	if ( param('saveformdata') ) { 
 		our $saveformdata = quotemeta(param('saveformdata')); 
@@ -178,20 +248,11 @@ if ($dbsettings eq "custom") {
 } else {
 	our $checkeddbsettings1 = "checked=checked";
 }
-if ( !$query{'settings'} ) { 
-	if ( param('settings') ) {
-		our $settings = quotemeta(param('settings'));
-	} else {
-		our $settings = 1;
-	}
-} else {
-	our $settings = quotemeta($query{'settings'});
-}
 if ( !$query{'step'} ) { 
 	if ( param('step') ) {
 		our $step = quotemeta(param('step'));
 	} else {
-		our $step = "";
+		our $step = "300";
 	}
 } else {
 	our $step = quotemeta($query{'step'});
@@ -228,7 +289,7 @@ if ( !$query{'dsname'} ) {
 	if ( param('dsname') ) {
 		our $dsname = quotemeta(param('dsname'));
 	} else {
-		our $dsname = 1;
+		our $dsname = "";
 	}
 } else {
 	our $dsname = quotemeta($query{'dsname'});
@@ -268,6 +329,17 @@ while ($i <= $rracount) {
 	} else {
 		${cf.$i} = quotemeta($query{"cf$i"});
 	}
+	if (${cf.$i} eq "AVERAGE") {
+		${selectedcf.$i.1} = "selected=selected";
+	} elsif (${cf.$i} eq "MIN") {
+		${selectedcf.$i.2} = "selected=selected";
+	} elsif (${cf.$i} eq "MAX") {
+		${selectedcf.$i.3} = "selected=selected";
+	} elsif (${cf.$i} eq "LAST") {
+		${selectedcf.$i.4} = "selected=selected";
+	} else {
+		${selectedcf.$i.1} = "selected=selected";
+	}
 	if ( !$query{"xff$i"} ) { 
 		if ( param("xff$i") ) {
 			${xff.$i} = quotemeta(param("xff$i"));
@@ -297,12 +369,30 @@ while ($i <= $rracount) {
 	}
 	$i++;
 }
+if ( !$query{'savedbsettings'} ) {
+        if ( param('savedbsettings') ) {
+                our $savedbsettings = quotemeta(param('savedbsettings'));
+        } else {
+                our $savedbsettings = 0;
+        }
+} else {
+        our $savedbsettings = quotemeta($query{'savedbsettings'});
+}
+if ( !$query{'savedbsettingsname'} ) {
+        if ( param('savedbsettingsname') ) {
+                our $savedbsettingsname = quotemeta(param('savedbsettingsname'));
+        } else {
+                our $savedbsettingsname = "";
+        }
+} else {
+        our $savedbsettingsname = quotemeta($query{'savedbsettingsname'});
+}
 
 # Clean up variables
 $saveformdata =~ tr/0-1//cd;
 $saveformdata = substr($saveformdata,0,1);
-$script =~ tr/0-1//cd;
-$script = substr($script,0,1);
+$savedbsettings =~ tr/0-1//cd;
+$savedbsettings = substr($savedbsettings,0,1);
 
 # Init Language
 # Clean up lang variable
@@ -322,7 +412,7 @@ our $pphrase = new Config::Simple($planguagefile);
 # Main program
 ##########################################################################
 
-if ($saveformdata) {
+if ($saveformdata || $script) {
   &save;
 
 } else {
@@ -375,6 +465,28 @@ sub form {
 	
 	$template_title = $pphrase->param("TXT0000") . ": " . $pphrase->param("TXT0001");
 	
+	# Unquote everything for the form
+        # Don't know why, but unquotemeta dies not wirk here?!? Use the "Hard way" with  =~ s/\\//g;
+	$loxonename =~ s/\\//g;
+	$description =~ s/\\//g;
+	$miniserver =~ s/\\//g;
+	$min =~ s/\\//g;
+	$max =~ s/\\//g;
+	$dbsettings =~ s/\\//g;
+	$settings =~ s/\\//g;
+	$step =~ s/\\//g;
+	$start =~ s/\\//g;
+	$dsname =~ s/\\//g;
+	$heartbeat =~ s/\\//g;
+	$i = 1;
+	while ($i <= $rracount) {
+		${cf.$i} =~ s/\\//g;
+		${xff.$i} =~ s/\\//g;
+		${step.$i} =~ s/\\//g;
+		${rows.$i} =~ s/\\//g;
+		$i++;
+	}
+
 	# Print Template
 	&lbheader;
 	open(F,"$installfolder/templates/plugins/$psubfolder/$lang/addstat_start.html") || die "Missing template plugins/$psubfolder/$lang/addstat_start.html";
@@ -384,6 +496,34 @@ sub form {
 	    print $_;
 	  }
 	close(F);
+
+	if ($rracount > 1) {
+		$i = 2;
+		our $cfx;
+		our $xffx;
+		our $stepx;
+		our $rowsx;
+		while ($i <= $rracount) {
+			$selectedcfx1 = ${selectedcf.$i.1};
+			$selectedcfx2 = ${selectedcf.$i.2};
+			$selectedcfx3 = ${selectedcf.$i.3};
+			$selectedcfx4 = ${selectedcf.$i.4};
+			$cfx = ${cf.$i};
+			$xffx = ${xff.$i};
+			$stepx = ${step.$i};
+			$rowsx = ${rows.$i};
+			open(F,"$installfolder/templates/plugins/$psubfolder/$lang/addstat_row.html") || die "Missing template plugins/$psubfolder/$lang/addstat_row.html";
+	  		while (<F>) 
+	  		{
+	    			$_ =~ s/<!--\$(.*?)-->/${$1}/g;
+	    			print $_;
+	  		}
+			close(F);
+		$i++;
+		}
+
+	}
+
 	open(F,"$installfolder/templates/plugins/$psubfolder/$lang/addstat_end.html") || die "Missing template plugins/$psubfolder/$lang/addstat_end.html";
 	  while (<F>) 
 	  {
@@ -412,6 +552,19 @@ sub save
 	if ( !$description ) {
 		$description = $loxonename;
 	}
+
+	if ($savedbsettings && !$savedbsettingsname) {
+		(my $sec,my $min,my $hour,my $mday,my $mon,my $year,my $wday,my $yday,my $isdst) = localtime();
+		$year = $year+1900;
+		$mon = $mon+1;
+		$mon = sprintf("%02d", $mon);
+		$mday = sprintf("%02d", $mday);
+		$hour = sprintf("%02d", $hour);
+		$min = sprintf("%02d", $min);
+		$sec = sprintf("%02d", $sec);
+		$savedbsettingsname = "Settings from $year$mon$mday-$hour$min$sec";
+	}
+
 	if ( !$miniserver ) {
 		$miniserver = "1";
 	}
@@ -519,9 +672,15 @@ sub save
 	# For custom RRD creation
 	if ($dbsettings eq "custom") {
 		our $command = "$installfolder/data/plugins/$psubfolder/databases/$dbfilename.rrd --start $start --step $step DS:value:$dsname:$heartbeat:$min:$max ";
+		if ($savedbsettings) {
+			our $linesavedbsettings = "$savedbsettingsname|$start|$step|$dsname|$heartbeat|$min|$max|$rracount|";
+		}
 		$i = 1;
 		while ($i <= $rracount) {
 			$command = $command . "RRA:${cf.$i}:${xff.$i}:${step.$i}:${rows.$i} ";
+			if ($savedbsettings) {
+				$linesavedbsettings = $linesavedbsettings . "${cf.$i}|${xff.$i}|${step.$i}|${rows.$i}|";
+			}
 			$i++;
 		}
 
@@ -572,6 +731,31 @@ sub save
 	print F $output;
 	close(F);
 
+	# Save DBSettings
+	if ($savedbsettings) {
+		$i = 0;
+		open(F,"+<$installfolder/config/plugins/$psubfolder/dbsettings.dat") || die "Cannot open database for DB-Settings.";
+		flock(F, 2);
+		binmode F, ':encoding(UTF-8)';
+		@data = <F>;
+		seek(F,0,0);
+		truncate(F,0);
+		foreach (@data){
+  			s/[\n\r]//g;
+  			# Comments
+  			if ($_ =~ /^\s*#.*/) {
+    				print F "$_\n";
+    				next;
+  			}
+    			print F "$_\n";
+			$i++;
+  		}
+		$i++;
+		$linesavedbsettings = Encode::decode( "UTF-8", unquotemeta($linesavedbsettings) );
+		print F "$i|$linesavedbsettings\n";
+		close (F);
+	}
+
 	# Print template
 	if (!$script) {
 		$template_title = $pphrase->param("TXT0000") . " - " . $pphrase->param("TXT0001");
@@ -590,7 +774,7 @@ sub save
 		&footer;
 	} else {
 		print "Content-Type: text/plain\n\n"; 
-		print "+++OK+++".$pphrase->param("TXT0002");
+		print "+++OK+++".$pphrase->param("TXT0002")."+++$dbfilename";
 	}
 	exit;
 		
