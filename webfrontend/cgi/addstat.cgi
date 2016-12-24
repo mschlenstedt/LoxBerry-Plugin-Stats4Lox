@@ -43,7 +43,7 @@ my $home = File::HomeDir->my_home;
 ##########################################################################
 
 # Version of this script
-$version = "0.0.8";
+$version = "0.0.9";
 
 # Figure out in which subfolder we are installed
 our $psubfolder = abs_path($0);
@@ -144,7 +144,7 @@ if ( ($load || $script) && $settings > 1 ) {
 		}
   	}
 	close (F);
-	# Use default values if we cannot foind settings
+	# Use default values if we cannot found settings
 	if (!found) {
 		$query{'dbsettings'} = "default";
 		$query{'settings'} = "1";
@@ -466,7 +466,7 @@ sub form {
 	$template_title = $pphrase->param("TXT0000") . ": " . $pphrase->param("TXT0001");
 	
 	# Unquote everything for the form
-        # Don't know why, but unquotemeta dies not wirk here?!? Use the "Hard way" with  =~ s/\\//g;
+        # Don't know why, but unquotemeta does not work here?!? Use the "Hard way" with  =~ s/\\//g;
 	$loxonename =~ s/\\//g;
 	$description =~ s/\\//g;
 	$miniserver =~ s/\\//g;
@@ -584,34 +584,49 @@ sub save
 		$miniserverport = @fields[1];
 	}
 
-	# Test if Miniserver is reachable
+	# Test if Miniserver is reachable - Try 5 times before giving up
 	$loxonenameurlenc = uri_escape( unquotemeta($loxonename) );
 	$url = "http://$miniserveradmin:$miniserverpass\@$miniserverip\:$miniserverport/dev/sps/io/$loxonenameurlenc/astate";
 
-	$ua = LWP::UserAgent->new;
-	$ua->timeout(1);
-	local $SIG{ALRM} = sub { die };
-	eval {
-  	alarm(1);
-  	our $response = $ua->get($url);
-  	our $urlstatus = $response->status_line;
-	our $rawxml = $response->decoded_content();
-	};
-	alarm(0);
+	our $found = 0;
+	our $i = 0;
 
-	# Error if we don't get status 200
-	my $urlstatuscode = substr($urlstatus,0,3);
-	if ($urlstatuscode ne "200") {
+        while (!$found || $i < 5) {
+		$ua = LWP::UserAgent->new;
+		$ua->timeout(5);
+		local $SIG{ALRM} = sub { die };
+		eval {
+  		alarm(5);
+  		our $response = $ua->get($url);
+  		our $urlstatus = $response->status_line;
+		our $rawxml = $response->decoded_content();
+		};
+		alarm(0);
+
+		# Error if we don't get status 200
+		my $urlstatuscode = substr($urlstatus,0,3);
+		if ($urlstatuscode ne "200") {
 			$error = $pphrase->param("TXT0013") . "<b> " . $urlstatuscode . "</b><br><br>" . $pphrase->param("TXT0014") . "<br><a href='" . $url . "' target='_blank'>$url</a>";
-			&error;
+			$i++;
+			next;	
+		}
+
+		# Error if status Code in XML is not 200
+		our $xml = XMLin($rawxml, KeyAttr => { LL => 'Code' }, ForceArray => [ 'LL', 'Code' ]);
+		our $xmlstatuscode = $xml->{Code};
+		if ($xmlstatuscode ne "200") {
+			$error = $pphrase->param("TXT0015") . "<b> " . $xmlstatuscode . "</b><br><br>" . $pphrase->param("TXT0014") . "<br><a href='" . $url . "' target='_blank'>$url</a>";
+			$i++;
+			next;	
+		} else {
+			$found = 1;
+		}
+		$i++;
 	}
 
-	# Error if status Code in XML is not 200
-	our $xml = XMLin($rawxml, KeyAttr => { LL => 'Code' }, ForceArray => [ 'LL', 'Code' ]);
-	our $xmlstatuscode = $xml->{Code};
-	if ($xmlstatuscode ne "200") {
-			$error = $pphrase->param("TXT0015") . "<b> " . $xmlstatuscode . "</b><br><br>" . $pphrase->param("TXT0014") . "<br><a href='" . $url . "' target='_blank'>$url</a>";
-			&error;
+	# If we could not reach the Miniserver
+	if ( !$found ) {
+		&error;
 	}
 
 	if ( !$min && $min ne 0 ) {
@@ -652,7 +667,7 @@ sub save
 	}
 
 	# Create Database
-	open(F,"<$installfolder/config/plugins/$psubfolder/id.dat") or die "Cannot open id.dat: $!";
+	open(F,"<$installfolder/config/plugins/$psubfolder/id_databases.dat") or die "Cannot open id_databases.dat: $!";
 		our $lastid = <F>;
 	close (F);
 
@@ -662,7 +677,7 @@ sub save
 		our $dbfilename = sprintf("%04d", $lastid);
 		if (!-e "$installfolder/data/plugins/$psubfolder/databases/$dbfilename.rrd") {
 			$i = 1;
-			open(F,">$installfolder/config/plugins/$psubfolder/id.dat") or die "Cannot open id.dat: $!";
+			open(F,">$installfolder/config/plugins/$psubfolder/id_databases.dat") or die "Cannot open id_databases.dat: $!";
 				flock(F, 2);
 				print F $lastid;
 			close (F);
