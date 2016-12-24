@@ -37,7 +37,7 @@ use Cwd 'abs_path';
 ##########################################################################
 
 # Version of this script
-$version = "0.0.3";
+$version = "0.0.4";
 
 # Figure out in which subfolder we are installed
 our $psubfolder = abs_path($0);
@@ -111,11 +111,13 @@ foreach (@data){
 	# Skip paused databases
 	open(F,"<$installfolder/data/plugins/$psubfolder/databases/@fields[0].status") || die "Cannot open status file for RRD-database.";
 	$status = <F>;
+        print "Status: $status\n";
 	if ($status eq 1) {
 		$logmessage = "<INFO> Skipping Statistic ID @fields[0] (@fields[3]) - Database is paused.";
 		&log;
 		next;
 	}
+	close F;
 
 	# Miniserver data
 	$miniserver = @fields[4];
@@ -187,6 +189,7 @@ foreach (@data){
 
 	# Reset status if needed (from red to green)
 	if ($status eq 0) {
+                print "Status was 0. Updating...\n";
 		open(F,">$installfolder/data/plugins/$psubfolder/databases/@fields[0].status") || die "Cannot open status file for RRD-database.";
 		flock(F,2);
 		print F "2";

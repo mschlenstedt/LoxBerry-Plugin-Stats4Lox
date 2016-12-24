@@ -43,7 +43,7 @@ my $home = File::HomeDir->my_home;
 ##########################################################################
 
 # Version of this script
-$version = "0.0.9";
+$version = "0.0.8";
 
 # Figure out in which subfolder we are installed
 our $psubfolder = abs_path($0);
