@@ -326,17 +326,26 @@ sub generate_import_table
 {
 	foreach my $statsobj (keys %lox_statsobject) {
 		# print STDERR $statsobj{Title} . "\n";
+		
+		# UNFINISHED 
+		# Set Statistic Definitions from Michael
+		$statdef = "1";
+				
 		$statstable .= '
 			  <tr>
 				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Title}) . '</td>
 				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Desc}) . '</td>
 				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Place}) . '</td>
 				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Category}) . '</td>
-				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{StatsType} . '</td>
-				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{MinVal} . '</td>
-				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{MaxVal} . '</td>
-				<td class="tg-yw4l">' . $statdef_dropdown . '</td>
-				<td class="tg-yw4l"> <input data-mini="true" type="checkbox" name="doimport" value="import"></td>
+				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{StatsType} . '<input type="hidden" name="statstype_' . $statsobj . '" value="' . $lox_statsobject{$statsobj}{StatsType} . '"></td>
+				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{MinVal} . '<input type="hidden" name="minval_' . $statsobj . '" value="' . $lox_statsobject{$statsobj}{MinVal} . '"></td>
+				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{MaxVal} . '<input type="hidden" name="maxval_' . $statsobj . '" value="' . $lox_statsobject{$statsobj}{MaxVal} . '"></td>
+				<td class="tg-yw4l">' . $statdef_dropdown . '<input type="hidden" name="statdef_' . $statsobj . '" value="' . $statdef . '"></td>
+				<td class="tg-yw4l"> 
+				<input data-mini="true" type="checkbox" name="doimport_' . $statsobj . '" value="import">
+				<input type="hidden" name="msnr_' . $statsobj . '" value="' . $lox_statsobject{$statsobj}{MSNr} . '">
+				<input type="hidden" name="msip_' . $statsobj . '" value="' . $lox_statsobject{$statsobj}{MSIP} . '">
+				</td>
 			  </tr>
 			';
 	}
