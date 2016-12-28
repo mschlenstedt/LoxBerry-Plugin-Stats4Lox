@@ -36,6 +36,7 @@ use XML::LibXML;
 use File::stat;
 use File::Basename;
 use Time::localtime;
+use HTML::Entities;
 # Debug
 use Time::HiRes qw/ time sleep /;
 
@@ -327,10 +328,10 @@ sub generate_import_table
 		# print STDERR $statsobj{Title} . "\n";
 		$statstable .= '
 			  <tr>
-				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{Title} . '</td>
-				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{Desc} . '</td>
-				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{Place} . 'Zentral</td>
-				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{Category} . '</td>
+				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Title}) . '</td>
+				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Desc}) . '</td>
+				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Place}) . '</td>
+				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Category}) . '</td>
 				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{StatsType} . '</td>
 				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{MinVal} . '</td>
 				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{MaxVal} . '</td>
@@ -416,17 +417,24 @@ sub readloxplan
 		}
 		# print "Objekt: ", $object->{Title}, " (StatsType = ", $object->{StatsType}, ") | Miniserver: ", $lox_miniserver{$ms_ref}{Title}, "\r\n";
 		$lox_statsobject{$object->{U}}{Title} = $object->{Title};
-		$lox_statsobject{$object->{U}}{Desc} = $object->{Desc};
+		if (defined $object->{Desc}) {
+			$lox_statsobject{$object->{U}}{Desc} = $object->{Desc}; }
+		else {
+			$lox_statsobject{$object->{U}}{Desc} = $object->{Title} . " (*)"; 
+		}
 		$lox_statsobject{$object->{U}}{StatsType} = $object->{StatsType};
 		$lox_statsobject{$object->{U}}{Type} = $object->{Type};
 		$lox_statsobject{$object->{U}}{MSName} = $lox_miniserver{$ms_ref}{Title};
 		$lox_statsobject{$object->{U}}{MSIP} = $lox_miniserver{$ms_ref}{IP};
 		$lox_statsobject{$object->{U}}{MSNr} = $cfg_mslist{$lox_miniserver{$ms_ref}{IP}};
-		# Place and Category needs to be checked if set and resolved 
-		# UNFINISHED
-		# $lox_statsobject{$object->{U}}{Category} = $object->getChildrenByLocalName("IoData")[0]{Cr};
-		# $lox_statsobject{$object->{U}}{Place} = $object->getChildrenByLocalName("IoData")[0]{Pr};
 		
+		# Place and Category
+		my @iodata = $object->getElementsByTagName("IoData");
+		# print STDERR "Cat: ", $lox_category{$iodata[0]->{Cr}}, "\r\n";
+		$lox_statsobject{$object->{U}}{Category} = $lox_category{$iodata[0]->{Cr}};
+		$lox_statsobject{$object->{U}}{Place} = $lox_room{$iodata[0]->{Pr}};
+		
+		# Min/Max values
 		if ($object->{Analog} ne "true") {
 			$lox_statsobject{$object->{U}}{MinVal} = 0;
 			$lox_statsobject{$object->{U}}{MaxVal} = 1;
