@@ -1,8 +1,8 @@
 											</table>
 											</div>
 
-											<a href="#" id="addrrabtn" onClick="AddRRA();return false;"data-role="button" data-icon="plus" data-mini="true" data-inline="true">RRA hinzuf&uuml;gen</a>
-											<a href="#" id="delrrabtn" onClick="DelRRA();return false;"data-role="button" data-icon="minus" data-mini="true" data-inline="true">RRA l&ouml;schen</a>
+											<a href="#" id="addrrabtn" onClick="AddRRA();return false;" data-role="button" data-icon="plus" data-mini="true" data-inline="true">RRA hinzuf&uuml;gen</a>
+											<a href="#" id="delrrabtn" onClick="DelRRA();return false;" data-role="button" data-icon="minus" data-mini="true" data-inline="true">RRA l&ouml;schen</a>
 
 											<p>
 											&nbsp;
@@ -25,7 +25,7 @@
 											<button type="submit" form="main_form" id="btnsubmit" data-role="button" data-inline="true" data-mini="true" data-icon="check">Speichern</button></td>
 											<td width="5"></td>
 											<td width="25%"><label id="labelsavedbsettings" for="savedbsettings">Als Vorgabe speichern</label><input onclick="disable()" 
-													type="checkbox" name="savedbsettings" id="savedbsettings" data-mini="true"></td>
+													type="checkbox" name="savedbsettings" id="savedbsettings" data-mini="true" value="1"></td>
 											<td width="25%"><input type="text" name="savedbsettingsname" id="savedbsettingsname" value="" placeholder="Vorgabenname"></td>
 											</tr>
 											</table>
@@ -209,7 +209,7 @@
 
 										// Load settings
 										function LoadSettings() {
-										//url = './addstat.cgi?load=1&loxonename=' + $('#loxonename').val();
-										//window.open(url);
+										url = './addstat.cgi?load=1&settings=' + $('#settings').val();
+										document.location.href = url;
 										}
        		</script>
