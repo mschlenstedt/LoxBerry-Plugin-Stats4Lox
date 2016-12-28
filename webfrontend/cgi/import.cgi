@@ -37,6 +37,7 @@ use File::stat;
 use File::Basename;
 use Time::localtime;
 use HTML::Entities;
+use HTTP::Request;
 # Debug
 use Time::HiRes qw/ time sleep /;
 
@@ -64,7 +65,7 @@ our %lox_statsobject;
 ##########################################################################
 
 # Version of this script
-$version = "0.1.1";
+$version = "0.1.2";
 
 # Figure out in which subfolder we are installed
 our $psubfolder = abs_path($0);
@@ -80,6 +81,7 @@ our $grepbin         = $cfg->param("BINARIES.GREP");
 our $awkbin          = $cfg->param("BINARIES.AWK");
 
 # Generate MS table with IP as key
+# We need this to have a Loxone-UID -> IP -> Stats-DB matching/key
 for (my $msnr = 1; $msnr <= $miniservercount; $msnr++) {
 	$cfg_mslist{$cfg->param("MINISERVER$msnr.IPADDRESS")} = $msnr;
 }
@@ -124,6 +126,9 @@ if ( !$query{'lang'} ) {
 $saveformdata =~ tr/0-1//cd;
 $saveformdata = substr($saveformdata,0,1);
 
+# Save if button save was pressed
+if ( param('submitbtn') ) { $doapply = 1; }
+
 # Init Language
 # Clean up lang variable
 $lang =~ tr/a-z//cd;
@@ -151,10 +156,11 @@ if ( $post->param('Upload') ) {
 	saveloxplan();
 	form();
 	
-} elsif ($saveformdata) {
-  &save;
+} elsif ($doapply) {
+  save();
+  form();
 } else {
-  &form;
+  form();
 }
 
 exit;
@@ -174,8 +180,7 @@ sub form {
 	# Prepare the form
 	
 	# Check if a .LoxPLAN is already available
-	
-	
+		
 	if ( -e $loxconfig_path ) {
 		my $loxplan_modified = ctime(stat($loxconfig_path)->mtime);
 		readloxplan();
@@ -197,7 +202,7 @@ sub form {
 		</select>';
 	
 	
-	
+	our $table_linecount = 0;
 	generate_import_table();
 		
 	
@@ -253,36 +258,87 @@ sub save
 
 	# Check values
 
-	my $miniserverip        = $cfg->param("MINISERVER$miniserver.IPADDRESS");
-	my $miniserverport      = $cfg->param("MINISERVER$miniserver.PORT");
-	my $miniserveradmin     = $cfg->param("MINISERVER$miniserver.ADMIN");
-	my $miniserverpass      = $cfg->param("MINISERVER$miniserver.PASS");
-	my $miniserverclouddns  = $cfg->param("MINISERVER$miniserver.USECLOUDDNS");
-	my $miniservermac       = $cfg->param("MINISERVER$miniserver.CLOUDURL");
+#	my $miniserverip        = $cfg->param("MINISERVER$miniserver.IPADDRESS");
+#	my $miniserverport      = $cfg->param("MINISERVER$miniserver.PORT");
+#	my $miniserveradmin     = $cfg->param("MINISERVER$miniserver.ADMIN");
+#	my $miniserverpass      = $cfg->param("MINISERVER$miniserver.PASS");
+#	my $miniserverclouddns  = $cfg->param("MINISERVER$miniserver.USECLOUDDNS");
+#	my $miniservermac       = $cfg->param("MINISERVER$miniserver.CLOUDURL");
 
-	# Use Cloud DNS?
-	if ($miniserverclouddns) {
-		$output = qx($home/bin/showclouddns.pl $miniservermac);
-		@fields = split(/:/,$output);
-		$miniserverip   = $fields[0];
-		$miniserverport = $fields[1];
+#	# Use Cloud DNS?
+#	if ($miniserverclouddns) {
+#		$output = qx($home/bin/showclouddns.pl $miniservermac);
+#		@fields = split(/:/,$output);
+#		$miniserverip   = $fields[0];
+#		$miniserverport = $fields[1];
+#	}
+
+#	# Print template
+#	$template_title = $pphrase->param("TXT0000") . " - " . $pphrase->param("TXT0001");
+#	$message = $pphrase->param("TXT0002");
+#	$nexturl = "./import.cgi?do=form";
+#
+#	print "Content-Type: text/html\n\n"; 
+#	&lbheader;
+#	open(F,"$installfolder/templates/system/$lang/success.html") || die "Missing template system/$lang/success.html";
+#	while (<F>) 
+#	{
+#		$_ =~ s/<!--\$(.*?)-->/${$1}/g;
+#		print $_;
+#	}
+#	close(F);
+#	&footer;
+
+	# On saving form, parse form data and create import jobs in FS
+	$form_linenumbers = param("linenumbers");
+		
+	if ($form_linenumbers <= 0) { 
+		print STDERR "WARNING: Seems to have empty POST data. (Form Linenumbers: " . $form_linenumbers . ")\n";
+		return; 
 	}
-
-	# Print template
-	$template_title = $pphrase->param("TXT0000") . " - " . $pphrase->param("TXT0001");
-	$message = $pphrase->param("TXT0002");
-	$nexturl = "./import.cgi?do=form";
-
-	print "Content-Type: text/html\n\n"; 
-	&lbheader;
-	open(F,"$installfolder/templates/system/$lang/success.html") || die "Missing template system/$lang/success.html";
-	while (<F>) 
-	{
-		$_ =~ s/<!--\$(.*?)-->/${$1}/g;
-		print $_;
+	
+	# Looping through post formdata lines
+	
+	my $addstat_urlbase = "http://localhost/admin/plugins/$psubfolder/addstat.cgi";
+	
+	for (my $line = 1; $line <= $form_linenumbers; $line++) {
+		# print STDERR "DEBUG: Line " . $line . ": UID " . param("loxuid_" . $line) . "\n";
+		if ( param("doimport_$line") eq 'import' ) {
+			print STDERR "DEBUG: IMPORT Line " . $line . ": UID " . param("loxuid_$line") . "\n";
+			
+			# Call Michaels addstat.cgi by URL to create RRD archive
+			my $loxonename = uri_escape( param("title_$line") );
+			my $loxuid = param("loxuid_$line");
+			my $description = uri_escape( param("desc_$line") . " (" . $loxuid . ")" );
+			# settings need some code to get dbsettings.datfrom Michael
+			my $settings = "";
+			my $minval = param("minval_$line");
+			my $maxval = param("maxval_$line");
+			my $place = uri_escape( param("place_$line") );
+			my $category = uri_escape( param("category_$line") );
+			my $stat_ms = param("msnr_$line");
+			
+			my $statfullurl = $addstat_urlbase . "?script=1&loxonename=$loxonename&description=$description&settings=$settings&miniserver=$stat_ms&minval=$minval&maxval=$maxval&place=$place&category=$category&uid=$loxuid";
+			print STDERR "DEBUG: addstat URL " . $statfullurl . "\n";
+			 
+			# HTTP Request
+			my $ua = LWP::UserAgent->new;
+			my $req = HTTP::Request->new(GET => $statfullurl);
+			# $req->header('content-type' => 'application/json');
+			# $req->header('x-auth-token' => 'kfksj48sdfj4jd9d');
+			 
+			my $resp = $ua->request($req);
+			if ($resp->is_success) {
+				my $message = $resp->decoded_content;
+				print STDERR "DEBUG: Received reply: $message\n";
+			}
+			else {
+				print STDERR "DEBUG: HTTP GET error code: ", $resp->code, "\n";
+				print STDERR "DEBUG: HTTP GET error message: ", $resp->message, "\n";
+			}
+		}
 	}
-	close(F);
-	&footer;
+	# For debugging, quit everything (will generate an error 500)
 	exit;
 		
 }
@@ -325,26 +381,28 @@ sub saveloxplan
 sub generate_import_table 
 {
 	foreach my $statsobj (keys %lox_statsobject) {
+		$table_linecount = $table_linecount + 1;
+			
 		# print STDERR $statsobj{Title} . "\n";
-		
 		# UNFINISHED 
 		# Set Statistic Definitions from Michael
 		$statdef = "1";
 				
 		$statstable .= '
 			  <tr>
-				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Title}) . '</td>
-				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Desc}) . '</td>
-				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Place}) . '</td>
-				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Category}) . '</td>
-				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{StatsType} . '<input type="hidden" name="statstype_' . $statsobj . '" value="' . $lox_statsobject{$statsobj}{StatsType} . '"></td>
-				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{MinVal} . '<input type="hidden" name="minval_' . $statsobj . '" value="' . $lox_statsobject{$statsobj}{MinVal} . '"></td>
-				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{MaxVal} . '<input type="hidden" name="maxval_' . $statsobj . '" value="' . $lox_statsobject{$statsobj}{MaxVal} . '"></td>
-				<td class="tg-yw4l">' . $statdef_dropdown . '<input type="hidden" name="statdef_' . $statsobj . '" value="' . $statdef . '"></td>
+				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Title}) . '<input type="hidden" name="title_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{Title} . '"></td>
+				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Desc}) . '<input type="hidden" name="desc_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{Desc} . '"></td>
+				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Place}) . '<input type="hidden" name="place_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{Place} . '"></td>
+				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Category}) . '<input type="hidden" name="category_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{Category} . '"></td>
+				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{StatsType} . '<input type="hidden" name="statstype_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{StatsType} . '"></td>
+				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{MinVal} . '<input type="hidden" name="minval_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MinVal} . '"></td>
+				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{MaxVal} . '<input type="hidden" name="maxval_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MaxVal} . '"></td>
+				<td class="tg-yw4l">' . $statdef_dropdown . '<input type="hidden" name="statdef_' . $table_linecount . '" value="' . $statdef . '"></td>
 				<td class="tg-yw4l"> 
-				<input data-mini="true" type="checkbox" name="doimport_' . $statsobj . '" value="import">
-				<input type="hidden" name="msnr_' . $statsobj . '" value="' . $lox_statsobject{$statsobj}{MSNr} . '">
-				<input type="hidden" name="msip_' . $statsobj . '" value="' . $lox_statsobject{$statsobj}{MSIP} . '">
+				<input data-mini="true" type="checkbox" name="doimport_' . $table_linecount . '" value="import">
+				<input type="hidden" name="msnr_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MSNr} . '">
+				<input type="hidden" name="msip_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MSIP} . '">
+				<input type="hidden" name="loxuid_' . $table_linecount . '" value="' . $statsobj . '">
 				</td>
 			  </tr>
 			';
