@@ -32,9 +32,11 @@ use XML::Simple qw(:strict);
 use warnings;
 
 # Christian Import
+use POSIX qw(strftime);
 use XML::LibXML;
 use File::stat;
 use File::Basename;
+use File::Path qw(make_path);
 use Time::localtime;
 use HTML::Entities;
 use HTTP::Request;
@@ -43,8 +45,6 @@ use Time::HiRes qw/ time sleep /;
 
 # Set maximum file upload to approx. 7 MB
 # $CGI::POST_MAX = 1024 * 10000;
-
-
 
 #use strict;
 #no strict "refs"; # we need it for template system
@@ -58,6 +58,15 @@ our %cfg_mslist;
 our $upload_message;
 our $stattable;
 our %lox_statsobject;
+
+# Logfile
+our $logfilepath; 
+our $lf;
+our @loglevels;
+our $loglevel=4;
+
+# Use loglevel with care! DEBUG=4 really fills up logfile. Use ERRORS=1 or WARNINGS=2, or disable with 0.
+# To log everything to STDERR, use $loglevel=5.
 		
 
 ##########################################################################
@@ -70,6 +79,11 @@ $version = "0.1.2";
 # Figure out in which subfolder we are installed
 our $psubfolder = abs_path($0);
 $psubfolder =~ s/(.*)\/(.*)\/(.*)$/$2/g;
+
+$logfilepath = "$home/log/plugins/$psubfolder/import_cgi.log";
+openlogfile();
+logger(4, "Logfile $logfilepath opened");
+
 
 my  $cfg             = new Config::Simple("$home/config/system/general.cfg");
 our $installfolder   = $cfg->param("BASE.INSTALLFOLDER");
@@ -293,18 +307,28 @@ sub save
 	$form_linenumbers = param("linenumbers");
 		
 	if ($form_linenumbers <= 0) { 
-		print STDERR "WARNING: Seems to have empty POST data. (Form Linenumbers: " . $form_linenumbers . ")\n";
+		logger(2, "Seems to have empty POST data. (Form Linenumbers: " . $form_linenumbers . ")");
 		return; 
 	}
 	
 	# Looping through post formdata lines
 	
 	my $addstat_urlbase = "http://localhost/admin/plugins/$psubfolder/addstat.cgi";
+	my $job_basepath = "$home/data/plugins/$psubfolder/import";
+	
+	eval { make_path($job_basepath) };
+	if ($@) {
+		logger(1, "Couldn't create $dir: $@");
+	}
+	
+	
+	logger(4, "Stats import path: $job_basepath");
+	
 	
 	for (my $line = 1; $line <= $form_linenumbers; $line++) {
-		# print STDERR "DEBUG: Line " . $line . ": UID " . param("loxuid_" . $line) . "\n";
+		logger(4, "Line " . $line . ": UID " . param("loxuid_" . $line));
 		if ( param("doimport_$line") eq 'import' ) {
-			print STDERR "DEBUG: IMPORT Line " . $line . ": UID " . param("loxuid_$line") . "\n";
+			logger(4, "IMPORT Line " . $line . ": UID " . param("loxuid_$line"));
 			
 			# Call Michaels addstat.cgi by URL to create RRD archive
 			my $loxonename = uri_escape( param("title_$line") );
@@ -319,25 +343,42 @@ sub save
 			my $stat_ms = param("msnr_$line");
 			
 			my $statfullurl = $addstat_urlbase . "?script=1&loxonename=$loxonename&description=$description&settings=$settings&miniserver=$stat_ms&minval=$minval&maxval=$maxval&place=$place&category=$category&uid=$loxuid";
-			print STDERR "DEBUG: addstat URL " . $statfullurl . "\n";
+			logger(4, "addstat URL " . $statfullurl);
 			 
-			# HTTP Request
-			my $ua = LWP::UserAgent->new;
-			my $req = HTTP::Request->new(GET => $statfullurl);
-			# $req->header('content-type' => 'application/json');
-			# $req->header('x-auth-token' => 'kfksj48sdfj4jd9d');
+
+# Michael is changing the addstat interface from web call to local execution
+			 # # HTTP Request
+			# my $ua = LWP::UserAgent->new;
+			# my $req = HTTP::Request->new(GET => $statfullurl);
+			# # $req->header('content-type' => 'application/json');
+			# # $req->header('x-auth-token' => 'kfksj48sdfj4jd9d');
 			 
-			my $resp = $ua->request($req);
-			if ($resp->is_success) {
-				my $message = $resp->decoded_content;
-				print STDERR "DEBUG: Received reply: $message\n";
-			}
-			else {
-				print STDERR "DEBUG: HTTP GET error code: ", $resp->code, "\n";
-				print STDERR "DEBUG: HTTP GET error message: ", $resp->message, "\n";
-			}
+			# my $resp = $ua->request($req);
+			# if ($resp->is_success) {
+				# my $message = $resp->decoded_content;
+				# logger (4, "Received reply: $message");
+			# }
+			# else {
+				# logger(3, "HTTP GET error code: " . $resp->code);
+				# logger(3, "HTTP GET error message: " . $resp->message);
+			# }
+		
+		
+		# Create import job file
+		
+		
+		
+		
+		
+		# End of activated lines loop
 		}
+	# End of lines loop
 	}
+	
+	
+	
+	
+	
 	# For debugging, quit everything (will generate an error 500)
 	exit;
 		
@@ -353,11 +394,11 @@ sub saveloxplan
 	my $cgi = new CGI();
 	my $upload_filehandle = $cgi->upload('loxplan');
 	if (! $upload_filehandle ) {
-		print STDERR "ERROR: LoxPLAN Upload - Stream filehandle not created.\n";
+		logger(1, "LoxPLAN Upload - Stream filehandle not created.");
 		exit (-1);
 	}
 	if (! open(UPLOADFILE, ">$loxconfig_path" ) ) {
-		print STDERR "ERROR: LoxPLAN Upload - cannot open local file handle.\n";
+		logger("ERROR: LoxPLAN Upload - cannot open local file handle.");
 		exit (-1);
 	}
 	# binmode UPLOADFILE;
@@ -383,7 +424,7 @@ sub generate_import_table
 	foreach my $statsobj (keys %lox_statsobject) {
 		$table_linecount = $table_linecount + 1;
 			
-		# print STDERR $statsobj{Title} . "\n";
+		# logger (4, $statsobj{Title});
 		# UNFINISHED 
 		# Set Statistic Definitions from Michael
 		$statdef = "1";
@@ -440,7 +481,7 @@ sub readloxplan
 	my $parser = XML::LibXML->new();
 	my $lox_xml = $parser->parse_file($loxconfig_path);
 	if (! $lox_xml) {
-		print STDERR "import.cgi: Cannot parse LoxPLAN XML file.\n";
+		logger(1, "import.cgi: Cannot parse LoxPLAN XML file.");
 		exit(-1);
 	}
 
@@ -482,7 +523,7 @@ sub readloxplan
 		} else {
 			$ms_ref = $parent->{Ref};
 		}
-		# print "Objekt: ", $object->{Title}, " (StatsType = ", $object->{StatsType}, ") | Miniserver: ", $lox_miniserver{$ms_ref}{Title}, "\r\n";
+		logger (4, "Objekt: " . $object->{Title} . " (StatsType = " . $object->{StatsType} . ") | Miniserver: " . $lox_miniserver{$ms_ref}{Title});
 		$lox_statsobject{$object->{U}}{Title} = $object->{Title};
 		if (defined $object->{Desc}) {
 			$lox_statsobject{$object->{U}}{Desc} = $object->{Desc}; }
@@ -497,7 +538,7 @@ sub readloxplan
 		
 		# Place and Category
 		my @iodata = $object->getElementsByTagName("IoData");
-		# print STDERR "Cat: ", $lox_category{$iodata[0]->{Cr}}, "\r\n";
+		logger (4, "Cat: " . $lox_category{$iodata[0]->{Cr}});
 		$lox_statsobject{$object->{U}}{Category} = $lox_category{$iodata[0]->{Cr}};
 		$lox_statsobject{$object->{U}}{Place} = $lox_room{$iodata[0]->{Pr}};
 		
@@ -517,7 +558,7 @@ sub readloxplan
 				$lox_statsobject{$object->{U}}{MaxVal} = "U";
 			}
 		}
-		print STDERR "Object Name: " . $lox_statsobject{$object->{U}}{Title} . "\n";
+		logger(4, "Object Name: " . $lox_statsobject{$object->{U}}{Title});
 	}
 	
 	my $end_run = time();
@@ -587,3 +628,44 @@ sub error
 	    }
 	  close(F);
 	}
+
+#####################################################
+# Logging
+#####################################################
+
+# Log Levels
+# 0 Nothing is logged
+# 1 Errors only
+# 2 Including warnings
+# 3 Including infos
+# 4 Full debug
+# 5 Send everything to STDERR
+
+	sub openlogfile
+	{
+		if ( $loglevel > 0 ) {
+			open $lf, ">>", $logfilepath
+				or do {
+					# If logfile cannot be created, change loglevel to 5 (STDERR)
+					print STDERR "ERROR: Stats4Lox Import - Could not create logfile $logfilepath";
+					$loglevel = 5;
+				}
+		}
+		@loglevels = ("NOLOG", "ERROR", "WARNING", "INFO", "DEBUG");
+	}
+
+	sub logger 
+	{
+		my ($level, $message) = @_;
+		
+		if ( $loglevel == 5 ) {
+			($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
+			my $now_string = sprintf("%04d-%02d-%02d %02d:%02d:%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec);
+			print STDERR "$now_string Stats4Lox import.cgi $loglevels[$level]: $message\r\n";
+		} elsif ( $level >= $loglevel && $loglevel <= 4) {
+			($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
+			my $now_string = sprintf("%04d-%02d-%02d %02d:%02d:%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec);
+			print $lf "$now_string $loglevels[$level]: $message\r\n";
+		}
+	}
+	
