@@ -333,6 +333,7 @@ sub save
 			# Call Michaels addstat.cgi by URL to create RRD archive
 			my $loxonename = uri_escape( param("title_$line") );
 			my $loxuid = param("loxuid_$line");
+			my $statstype = param("statstype_$line");
 			my $description = uri_escape( param("desc_$line") . " (" . $loxuid . ")" );
 			# settings need some code to get dbsettings.datfrom Michael
 			my $settings = "";
@@ -380,6 +381,7 @@ sub save
 						$job = new Config::Simple(syntax=>'ini');
 						$job->param("loxonename", 	$loxonename);
 						$job->param("loxuid", 		$loxuid);
+						$job->param("statstype", 	$statstype);
 						$job->param("description", 	$description);
 						$job->param("settings",		$settings);
 						$job->param("minval",		$minval);
@@ -388,9 +390,9 @@ sub save
 						$job->param("category",		$category);
 						$job->param("ms_nr",		$stat_ms);
 						$job->param("db_nr",		$resp_dbnr);
-						$job->param("import_epoch",		"0");
+						$job->param("import_epoch",	"0");
 						$job->write("$job_basepath/$loxuid.job") or logger (1, "Could not create job file for $loxonename with DB number $resp_dbnr");
-						
+						undef $job;
 					} else { 
 						# Running state - do not create new job
 						logger (2, "Job $loxonename ($loxuid) is currently in 'Running' state and will not be created again.");
@@ -404,19 +406,12 @@ sub save
 				logger(1, "Calling addstat URL returns an error:");
 				logger(1, "HTTP GET error: " . $resp->code . " " . $resp->message);
 			}
-		exit;
-		
 		# End of activated lines loop
 		}
 	# End of lines loop
 	}
-	
-	
-	
-	
-	
 	# For debugging, quit everything (will generate an error 500)
-	exit;
+	# exit;
 		
 }
 
