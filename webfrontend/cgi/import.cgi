@@ -347,28 +347,64 @@ sub save
 			 
 
 # Michael is changing the addstat interface from web call to local execution
-			 # # HTTP Request
-			# my $ua = LWP::UserAgent->new;
-			# my $req = HTTP::Request->new(GET => $statfullurl);
-			# # $req->header('content-type' => 'application/json');
-			# # $req->header('x-auth-token' => 'kfksj48sdfj4jd9d');
+			 # HTTP Request
+			# logger (4, "UA Instance");
+			my $ua = LWP::UserAgent->new;
+			# logger (4, "REQ Instance");
+			#my $req = HTTP::Request->new(GET => $statfullurl);
+			# $req->header('content-type' => 'application/json');
+			# $req->header('x-auth-token' => 'kfksj48sdfj4jd9d');
 			 
-			# my $resp = $ua->request($req);
-			# if ($resp->is_success) {
-				# my $message = $resp->decoded_content;
-				# logger (4, "Received reply: $message");
-			# }
-			# else {
-				# logger(3, "HTTP GET error code: " . $resp->code);
-				# logger(3, "HTTP GET error message: " . $resp->message);
-			# }
-		
-		
-		# Create import job file
-		
-		
-		
-		
+			# logger (4, "RESP Instance");
+			my $resp = $ua->get($statfullurl);
+			# logger (4, "IF Instance " . $resp->decoded_content );
+			
+			if ($resp->is_success) {
+				my $message = $resp->decoded_content;
+				logger (3, "Successful addstat http request");
+				logger (4, "HTTP reply: " . $message);
+				
+				# Format addstat response to get useful output
+				my @stat_message = split /\+/, $message;
+				logger(4, "Resp_Status: $stat_message[3] Resp_Text $stat_message[6] Resp_DBID $stat_message[9]");
+				my $resp_status = $stat_message[3];
+				my $resp_message = $stat_message[6];
+				my $resp_dbnr = $stat_message[9];
+				if ($resp_status eq "OK" && $resp_dbnr > 0) {
+					logger(3, "addstat - RRD successfully created with DB-Nr $resp_dbnr");
+					# Addstat successfully called 
+					
+					# Check if a job is already running
+					if (! -e "$job_basepath/$loxuid.running" ) {
+						# Not running - create job
+						$job = new Config::Simple(syntax=>'ini');
+						$job->param("loxonename", 	$loxonename);
+						$job->param("loxuid", 		$loxuid);
+						$job->param("description", 	$description);
+						$job->param("settings",		$settings);
+						$job->param("minval",		$minval);
+						$job->param("maxval",		$maxval);
+						$job->param("place",		$place);
+						$job->param("category",		$category);
+						$job->param("ms_nr",		$stat_ms);
+						$job->param("db_nr",		$resp_dbnr);
+						$job->param("import_epoch",		"0");
+						$job->write("$job_basepath/$loxuid.job") or logger (1, "Could not create job file for $loxonename with DB number $resp_dbnr");
+						
+					} else { 
+						# Running state - do not create new job
+						logger (2, "Job $loxonename ($loxuid) is currently in 'Running' state and will not be created again.");
+					}
+				} else {
+					# Addstat running but failed
+					logger(2, "addstat not successfully. Returned $resp_status - $resp_message");
+				}
+			} else {
+				# Addstat URL Call failed
+				logger(1, "Calling addstat URL returns an error:");
+				logger(1, "HTTP GET error: " . $resp->code . " " . $resp->message);
+			}
+		exit;
 		
 		# End of activated lines loop
 		}
@@ -662,7 +698,7 @@ sub error
 			($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
 			my $now_string = sprintf("%04d-%02d-%02d %02d:%02d:%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec);
 			print STDERR "$now_string Stats4Lox import.cgi $loglevels[$level]: $message\r\n";
-		} elsif ( $level >= $loglevel && $loglevel <= 4) {
+		} elsif ( $level <= $loglevel && $loglevel <= 4) {
 			($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
 			my $now_string = sprintf("%04d-%02d-%02d %02d:%02d:%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec);
 			print $lf "$now_string $loglevels[$level]: $message\r\n";
