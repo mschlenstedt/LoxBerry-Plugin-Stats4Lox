@@ -2,3 +2,4 @@
 rrdtool
 rrdcached
 libstring-escape-perl
+librrds-perl
