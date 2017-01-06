@@ -253,10 +253,11 @@ for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
 			logger(2, "Downloading of XML failed - possibly non-existing month (continuing with next month): $response->status_line");
 			next;
 		}
+		
 		my $parser = XML::LibXML->new();
 		eval {
 			my $stats = XML::LibXML->load_xml(
-				string => $response->decoded_content
+				string => $response->content
 				);
 		};
 		if ($@) {
@@ -265,12 +266,15 @@ for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
 		} else {
 			logger(4, "Seems that XML could be loaded");
 		}
+		
 		# In $stats we should have our XML now
-		logger(4, "First node? " . $stats->nodeName);
-		
-		
+		foreach my $node ($stats->findnodes('/Statistics')) {
+			# $node->{Name} returns the name of the sensor
+			logger(4, "Node " . $node->{Name});
+		}
 		
 		# We have to break out of the loop if we have reached the current year/month
+		# Issue - if current month/year fails, this code is never reached to quit loop
 		if ($year == $now_dt->year && $month == $now_dt->month) {
 			last;
 		}
