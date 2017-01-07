@@ -228,9 +228,9 @@ if ($lastupdate_ep < 1230768000) {
 	$lastupdate_ep = 1230768000;
 }
 
-## Fast DEBUG 
+## Fast DEBUG - Start at a later time
 ##
-$lastupdate_ep = 1470002400;
+$lastupdate_ep = 1470009600;
 ##
 ##
 
@@ -246,19 +246,22 @@ my $lastupdate_year = $lastupdate_dt->year;
 
 my $now_dt = DateTime->now; 
 
-logger(4, "Current Perl process memory: " . get_current_process_memory());
+# logger(4, "Current Perl process memory: " . get_current_process_memory());
 
 
 logger(4, "RRD last update month year: $lastupdate_month/$lastupdate_year");
 
 # Looping through month and year
 
-
 # Year Loop
 for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
 	# Month loop
 	foreach my $month (1...12) {
-
+		# Skip month in resuming year
+		if ($year == $lastupdate_year && $month < $lastupdate_month) {
+			next;
+		}
+	
 		# Example URL http://192.168.0.77/stats/00ac8517-0961-11e1-99b9f25d750310ed.201207.xml
 		$statsurl = sprintf("http://$miniserveradmin:$miniserverpass\@$miniserverip:$miniserverport/stats/$loxuid.%04d%02d.xml", $year, $month);
 		logger(4, " Year $year Month $month Stats-URL $statsurl ");
