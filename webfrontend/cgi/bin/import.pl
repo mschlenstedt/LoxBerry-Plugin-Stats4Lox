@@ -72,12 +72,23 @@ use POSIX qw(strftime);
 use POSIX qw(ceil);
 # use DateTime::Format::ISO8601;
 use Time::Piece;
+use Time::HiRes qw/ time sleep /;
+
 
 # Logfile
 our $logfilepath; 
 our $lf;
 our @loglevels;
 our $loglevel=5;
+
+
+# Use RAM disk 
+# Parameters:
+# 'Dirty' - Do all processing in RAM Disk
+# 'Fast' - Copy back after every imported year
+# 'Save' - Copy back after every imported month
+# unset - off
+our $use_ram_disk='Fast'; 
 
 # Use loglevel with care! DEBUG=4 really fills up logfile. Use ERRORS=1 or WARNINGS=2, or disable with 0.
 # To log everything to STDERR, use $loglevel=5.
@@ -95,13 +106,11 @@ $version = "0.1.2";
 # $psubfolder =~ s/(.*)\/(.*)\/bin\/(.*)$/$2/g;
 $psubfolder = 'stats4lox';
 
-
 # my $home = File::HomeDir->my_home;
 $home = '/opt/loxberry';
 
 print STDERR "Home: $home Pluginsubfolder $psubfolder\n";
 my $job_basepath = "$home/data/plugins/$psubfolder/import";
-
 
 my $cfg             = new Config::Simple("$home/config/system/general.cfg");
 my $lang            = $cfg->param("BASE.LANG");
@@ -209,10 +218,27 @@ logger (3, "Using RRD-File $rrdfile");
 # Check if rrdcached daemon is running
 our $rrdcached = NULL; # RRDCache Daemon Sock
 if (-S "/var/run/rrdcached.sock") {
-		$rrdcached = "--daemon=/var/run/rrdcached.sock";
-		logger(4, "RRDCached is running and will be used.");
+		$rrdcached = "--daemon=unix:/var/run/rrdcached.sock";
+		logger(3, "RRDCached is running - flushing RRD data");
+		RRDs::flushcached($rrdcached, $rrdfile);
+		my $ERR=RRDs::error;
+		if ($ERR) {
+			logger(2, "Error processing rrds::flushcached: $ERR");
+		}
 } else {
-		logger(2, "RRDCached seems not to be running. Direct write will be used and may degrade import performance.");
+		logger(2, "RRDCached seems not to be running.");
+}
+
+# Try to use RAM disk for processing
+if ($use_ram_disk) {
+	logger(3, "RAM-Disk usage enabled with $use_ram_disk. Initializing RAM-Disk copy of database");
+	if ((copy($rrdfile, "/run/") && -e "/run/") && (-w "/run/$db_nr.rrd")) {
+		logger(3, " --> RAM-Disk copy initialized in /run/");
+		our $persistent_rrdfile = $rrdfile;
+		$rrdfile = "/run/$db_nr.rrd";
+	} else {
+		logger(2, " --> Could not initialize RAM-Disk copy - Continuing with direct disk write");
+	}
 }
 
 # Get last update time 	
@@ -261,7 +287,10 @@ for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
 		if ($year == $lastupdate_year && $month < $lastupdate_month) {
 			next;
 		}
-	
+		
+		# Calculate Timing
+		my $start_run = time();
+			
 		# Example URL http://192.168.0.77/stats/00ac8517-0961-11e1-99b9f25d750310ed.201207.xml
 		$statsurl = sprintf("http://$miniserveradmin:$miniserverpass\@$miniserverip:$miniserverport/stats/$loxuid.%04d%02d.xml", $year, $month);
 		logger(4, " Year $year Month $month Stats-URL $statsurl ");
@@ -285,6 +314,11 @@ for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
 		} else {
 			logger(4, "Seems that XML could be loaded");
 		}
+		# Copy yearly
+		if ($month == 1) {
+			copyramdisk('Fast');
+		}
+		
 		
 		# In $stats we should have our XML now
 		# In case the XML root would be changed
@@ -297,7 +331,7 @@ for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
 		# logger(4, "Node " . $node->{Name});
 		
 		my @dataset = $node->getChildrenByTagName("S");
-		
+				
 		# Loop data
 		# $data is each statistic datapoint
 		#
@@ -334,9 +368,15 @@ for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
 			rrdupdate();
 		}
 		
-		logger (3, "   $month.$year has overall $data_counter datapoints updated");
-		
 		$lastupdate_ep = $data_time->epoch;
+
+		# Copy monthly
+		copyramdisk('Save');
+		
+		my $end_run = time();
+		my $run_time = $end_run - $start_run;
+	
+		logger (3, "   Month $month/$year has overall $data_counter datapoints updated in " . ceil($run_time) . " seconds.");
 		
 		# We have to break out of the loop if we have reached the current year/month
 		# Issue - if current month/year fails, this code is never reached to quit loop
@@ -345,11 +385,19 @@ for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
 		}
 	# End of month loop
 	}
-
+	
 # End of year loop
-
 }
 
+# Copy finally in every case (also if it is possibly not required)
+copyramdisk('Save');
+copyramdisk('Fast');
+copyramdisk('Dirty');
+# Delete file from RAM-Disk
+if (-e "/run/$db_nr.rrd") {
+	unlink "/run/$db_nr.rrd";
+}
+		
 
 #######################################################
 # RRD Update
@@ -365,24 +413,8 @@ sub rrdupdate {
 		logger(1, "Error processing rrds::update: $ERR");
 	}	
 	undef @data_value_array;
-
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
 #####################################################
 # Logging
 #####################################################
@@ -427,12 +459,33 @@ sub rrdupdate {
 	}
 
 #############################################################
+# copyramdisk	
+#############################################################
+
+sub copyramdisk 
+{
+	my ($mode) = @_;
+	# from ... source
+	# to ... destination
+	# mode ... 'Fast', 'Save', 'Dirty'
+	
+	# If RAM-Disk 'Fast' is used, copy back the file
+	if ($use_ram_disk eq $mode && $persistent_rrdfile) {
+		if (copy($rrdfile, $persistent_rrdfile)) {
+			logger(3, " --> RAM-Disk database copied back (Mode $mode)");
+		} else {
+			logger(1, " --> Could not copy the RAM-Disk database back to disk!");
+		}
+	}
+}
+
+#############################################################
 # Get process memory
 # This call heavily reduces performance - only for debugging
 #############################################################
-use Proc::ProcessTable;
 sub get_current_process_memory {
-  CORE::state $pt = Proc::ProcessTable->new;
-  my %info = map { $_->pid => $_ } @{$pt->table};
-  return $info{$$}->rss;
+	use Proc::ProcessTable;
+	CORE::state $pt = Proc::ProcessTable->new;
+	my %info = map { $_->pid => $_ } @{$pt->table};
+	return $info{$$}->rss;
 }
