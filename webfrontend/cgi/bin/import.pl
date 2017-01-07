@@ -199,7 +199,6 @@ if ($statstype < 1)		{ logger(1, "Loxone Statistic type not defined - Terminatin
 ##############################
 
 # our $rrdtool = '/usr/bin/rrdtool';
-
 $rrdfile = "$installfolder/data/plugins/$psubfolder/databases/$db_nr.rrd";
 if (! -e $rrdfile) {
 	logger(1, "RRD-File $rrdfile does not exist - Terminating");
@@ -304,16 +303,33 @@ for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
 		# Example data from Energy monitor
 		# <S T="2016-08-17 23:47:00" V="0.572" V2="0.000"/>
 		# <S T="2016-08-17 23:48:00" V="0.572" V2="0.000"/>
-		my $data_value_string;
+		my @data_value_array;
+		my $data_array_nr = 0;
+		my $data_counter = 0;
 		foreach $data (@dataset) {
+			$data_counter++;
 			# Possibly we have timezone issues - TO BE CHECKED
 			my $data_time = Time::Piece->strptime ($data->{T}, "%Y-%m-%d %T");
 			#logger(4, "   --> Datapoint Date/Time $data->{T} Epoch: " . $data_time->epoch . " Value: $data->{V}"); # Many logs
-			$data_value_string .= $data_time->epoch . ':' . $data->{V} . ' ';
+			$data_value_array[$data_array_nr] .= $data_time->epoch . ':' . $data->{V} . ' ';
+			# For every 1000 datapoints start new sting in array
+			if ($data_counter%100 == 0) {
+				logger (4, "    --> $data_counter Datapoints prepared for RRD update ...");
+				$data_array_nr++;
+			}	
 		}
-		logger (4, "  Datapoint lenght of full month: " . length($data_value_string)  . " Chars");
 		
-		
+		logger (3, "   $month.$year has overall $data_counter datapoints prepared for RRD Update - Starting RRD Update");
+		foreach my $data_bulk (0..$#data_value_array) {
+			logger (3, "   --> Updating bulk " . ($data_bulk+1) . " from " . ($#data_value_array+1));
+			RRDs::update($rrdcached, $rrdfile, $data_value_array[$data_bulk]);
+			# --skip-past-updates not supported with rrdtool 1.4.8 (first with 1.5.0) - this might get a problem
+			my $ERR=RRDs::error;
+			if ($ERR) {
+				logger(1, "Error processing rrds::update: $ERR");
+			}
+		}
+				
 		# We have to break out of the loop if we have reached the current year/month
 		# Issue - if current month/year fails, this code is never reached to quit loop
 		if ($year == $now_dt->year && $month == $now_dt->month) {
