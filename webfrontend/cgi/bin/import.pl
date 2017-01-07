@@ -40,6 +40,11 @@
 # Job aufräumen
 # evt. Polling starten
 
+# 
+# Tools 
+# Online RRD drawer http://rrdwizard.appspot.com/import.php
+# Online Epoch converter http://www.epochconverter.com/
+# Perl Time::Piece http://search.cpan.org/~esaym/Time-Piece-1.31/Piece.pm
 
 
 
@@ -64,6 +69,9 @@ use Cwd 'abs_path';
 use DateTime;
 use RRDs;
 use POSIX qw(strftime);
+use POSIX qw(ceil);
+# use DateTime::Format::ISO8601;
+use Time::Piece;
 
 # Logfile
 our $logfilepath; 
@@ -220,6 +228,13 @@ if ($lastupdate_ep < 1230768000) {
 	$lastupdate_ep = 1230768000;
 }
 
+## Fast DEBUG 
+##
+$lastupdate_ep = 1470002400;
+##
+##
+
+
 # Try some time calculation for warming up
 $lastupdate_str = strftime '%d.%m.%Y %H:%M:%S', localtime $lastupdate_ep;
 logger(4, "RRD last update epoch processed: EPOCH $lastupdate_ep - Human Readable $lastupdate_str");
@@ -231,16 +246,19 @@ my $lastupdate_year = $lastupdate_dt->year;
 
 my $now_dt = DateTime->now; 
 
+logger(4, "Current Perl process memory: " . get_current_process_memory());
 
 
 logger(4, "RRD last update month year: $lastupdate_month/$lastupdate_year");
 
 # Looping through month and year
 
+
 # Year Loop
 for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
 	# Month loop
 	foreach my $month (1...12) {
+
 		# Example URL http://192.168.0.77/stats/00ac8517-0961-11e1-99b9f25d750310ed.201207.xml
 		$statsurl = sprintf("http://$miniserveradmin:$miniserverpass\@$miniserverip:$miniserverport/stats/$loxuid.%04d%02d.xml", $year, $month);
 		logger(4, " Year $year Month $month Stats-URL $statsurl ");
@@ -255,23 +273,43 @@ for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
 		}
 		
 		my $parser = XML::LibXML->new();
-		eval {
-			my $stats = XML::LibXML->load_xml(
-				string => $response->content
-				);
-		};
+			my $stats = XML::LibXML->load_xml( string => $response->content);
 		if ($@) {
 			logger(2, "Could not read XML (continuing with next month): $@");
+			# undef $stats;
+			# undef $parser;
 			next;
 		} else {
 			logger(4, "Seems that XML could be loaded");
 		}
 		
 		# In $stats we should have our XML now
-		foreach my $node ($stats->findnodes('/Statistics')) {
-			# $node->{Name} returns the name of the sensor
-			logger(4, "Node " . $node->{Name});
+		# In case the XML root would be changed
+		##my @nodes = $stats->findnodes('/Statistics');
+		##my $node = @nodes[0];
+		
+		my $node = $stats->getDocumentElement;
+		
+		# $node->{Name} returns the name of the sensor
+		# logger(4, "Node " . $node->{Name});
+		
+		my @dataset = $node->getChildrenByTagName("S");
+		
+		# Loop data
+		# $data is each statistic datapoint
+		#
+		# Example data from Energy monitor
+		# <S T="2016-08-17 23:47:00" V="0.572" V2="0.000"/>
+		# <S T="2016-08-17 23:48:00" V="0.572" V2="0.000"/>
+		my $data_value_string;
+		foreach $data (@dataset) {
+			# Possibly we have timezone issues - TO BE CHECKED
+			my $data_time = Time::Piece->strptime ($data->{T}, "%Y-%m-%d %T");
+			#logger(4, "   --> Datapoint Date/Time $data->{T} Epoch: " . $data_time->epoch . " Value: $data->{V}"); # Many logs
+			$data_value_string .= $data_time->epoch . ':' . $data->{V} . ' ';
 		}
+		logger (4, "  Datapoint lenght of full month: " . length($data_value_string)  . " Chars");
+		
 		
 		# We have to break out of the loop if we have reached the current year/month
 		# Issue - if current month/year fails, this code is never reached to quit loop
@@ -284,11 +322,6 @@ for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
 # End of year loop
 
 }
-
-
-
-
-
 
 
 
@@ -340,14 +373,27 @@ for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
 	{
 		my ($level, $message) = @_;
 		
+		# Heavily reduces performance - only for debugging!
+		# $memusage = ceil(get_current_process_memory()/1024) . " KiB";
+		
 		if ( $loglevel == 5 ) {
 			($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
 			my $now_string = sprintf("%04d-%02d-%02d %02d:%02d:%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec);
-			print STDERR "$now_string Stats4Lox import.cgi $loglevels[$level]: $message\r\n";
+			print STDERR "$now_string $memusage Stats4Lox import.cgi $loglevels[$level]: $message\r\n";
 		} elsif ( $level <= $loglevel && $loglevel <= 4) {
 			($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
 			my $now_string = sprintf("%04d-%02d-%02d %02d:%02d:%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec);
-			print $lf "$now_string $loglevels[$level]: $message\r\n";
+			print $lf "$now_string $memusage $loglevels[$level]: $message\r\n";
 		}
 	}
-	
+
+#############################################################
+# Get process memory
+# This call heavily reduces performance - only for debugging
+#############################################################
+use Proc::ProcessTable;
+sub get_current_process_memory {
+  CORE::state $pt = Proc::ProcessTable->new;
+  my %info = map { $_->pid => $_ } @{$pt->table};
+  return $info{$$}->rss;
+}
