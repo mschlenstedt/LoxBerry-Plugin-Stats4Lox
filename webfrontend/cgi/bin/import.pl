@@ -81,6 +81,23 @@ our $lf;
 our @loglevels;
 our $loglevel=5;
 
+our	%StatTypes = ( 	1, "Jede Änderung (max. ein Wert pro Minute)",
+					2, "Mittelwert pro Minute",
+					3, "Mittelwert pro 5 Minuten",
+					4, "Mittelwert pro 10 Minuten",
+					5, "Mittelwert pro 30 Minuten",
+					6, "Mittelwert pro Stunde",
+					7, "Digital/Jede Änderung");
+					
+our	%StatSteps = ( 	1, 60,
+					2, 60,
+					3, 300,
+					4, 600,
+					5, 1800,
+					6, 3600,
+					7, 60);
+					
+					
 
 # Use RAM disk 
 # Parameters:
@@ -88,7 +105,7 @@ our $loglevel=5;
 # 'Fast' - Copy back after every imported year
 # 'Save' - Copy back after every imported month
 # unset - off
-our $use_ram_disk='Fast'; 
+our $use_ram_disk='Save'; 
 
 # Use loglevel with care! DEBUG=4 really fills up logfile. Use ERRORS=1 or WARNINGS=2, or disable with 0.
 # To log everything to STDERR, use $loglevel=5.
@@ -146,20 +163,22 @@ if (! -w "$job_basepath/$jobname.job") {
 	exit(1);
 }
 
-# Rename the job file
-if (! move("$job_basepath/$jobname.job", "$job_basepath/$jobname.running")) {
-	logger(1, "Job $job_basepath/$jobname.job could not be renamed to .running - Terminating");
-	exit(2);
-}
+# Rename the job file (commented for debugging!)
+#if (! move("$job_basepath/$jobname.job", "$job_basepath/$jobname.running")) {
+#	logger(1, "Job $job_basepath/$jobname.job could not be renamed to .running - Terminating");
+#	exit(2);
+#}
 
 ###################################
 # Read job file
 ###################################
 
-our $job = new Config::Simple("$job_basepath/$jobname.running");
+#our $job = new Config::Simple("$job_basepath/$jobname.running");
+our $job = new Config::Simple("$job_basepath/$jobname.job");
+
 my $loxonename = $job->param("loxonename");
 my $loxuid = $job->param("loxuid");
-my $statstype = $job->param("statstype");
+our $statstype = $job->param("statstype");
 my $description = $job->param("description");
 my $settings = $job->param("settings");
 my $minval = $job->param("minval");
@@ -176,7 +195,7 @@ if ($ms_nr < 1) 		{ logger(1, "Miniserver not defined - Terminating"); exit(3);}
 if ($db_nr < 1) 		{ logger(1, "RRD DB number not defined - Terminating"); exit(4);}
 if (! $loxuid)			{ logger(1, "Loxone UID not defined - Terminating"); exit(5);}
 if ($statstype < 1)		{ logger(1, "Loxone Statistic type not defined - Terminating"); exit(6);}
-
+if ($statstype > 7)		{ logger(2, "This Loxone statistic has an UNSUPPORTED statistic type. Continuing ... but I've told you!"); }
 
 ###################################
 # Read Miniserver credentials
@@ -241,13 +260,28 @@ if ($use_ram_disk) {
 	}
 }
 
-# Get last update time 	
-our $lastupdate_ep = RRDs::last($rrdfile);
+# Get last update time 	(replaced by RRDs::info)
+# our $lastupdate_ep = RRDs::last($rrdfile);
+# my $ERR=RRDs::error;
+# if ($ERR) {
+	# logger(1, "Error processing rrds::last: $ERR");
+# }
+# logger(4, "RRD last update epoch RAW: $lastupdate_ep");
+
+# Get RRD infos
+my $rrdinfo = RRDs::info ($rrdfile);
 my $ERR=RRDs::error;
 if ($ERR) {
-	logger(1, "Error processing rrds::last: $ERR");
+	logger(1, "Error processing RRDs::info: $ERR");
+	logger(2, "Assuming lastupdate=never and stepsize=300. There might come up more troubles later...");
+
+	our $lastupdate_ep = 0;
+	our $rrd_step = 300;
+} else {
+	our $lastupdate_ep = $$rrdinfo{'last_update'};
+	our $rrd_step = $$rrdinfo{'step'};
 }
-logger(4, "RRD last update epoch RAW: $lastupdate_ep");
+logger(4, "RRD lastupdate (epoch): $lastupdate_ep , Stepsize $rrd_step seconds.");
 
 # If timestamp is earlier then 0 of Loxone-time, set it to Loxone-time 0 == 1230768000 Epoch
 if ($lastupdate_ep < 1230768000) {
@@ -262,25 +296,26 @@ if ($lastupdate_ep < 1230768000) {
 
 
 # Try some time calculation for warming up
-$lastupdate_str = strftime '%d.%m.%Y %H:%M:%S', localtime $lastupdate_ep;
-logger(4, "RRD last update epoch processed: EPOCH $lastupdate_ep - Human Readable $lastupdate_str");
+# $lastupdate_str = strftime '%d.%m.%Y %H:%M:%S', localtime $lastupdate_ep;
 
-my $lastupdate_dt = DateTime->from_epoch( epoch => $lastupdate_ep ); 
+#my $lastupdate_dt = DateTime->from_epoch( epoch => $lastupdate_ep ); 
+my $lastupdate = Time::Piece->new();
+$lastupdate = $lastupdate->strptime($lastupdate_ep, '%s');
 
-my $lastupdate_month = $lastupdate_dt->month;
-my $lastupdate_year = $lastupdate_dt->year;
+my $lastupdate_month = $lastupdate->mon;
+my $lastupdate_year = $lastupdate->year;
 
-my $now_dt = DateTime->now; 
+my $now = Time::Piece->localtime; 
 
 # logger(4, "Current Perl process memory: " . get_current_process_memory());
 
-
+logger(4, "RRD last update epoch processed: EPOCH $lastupdate_ep - Human Readable $lastupdate");
 logger(4, "RRD last update month year: $lastupdate_month/$lastupdate_year");
 
 # Looping through month and year
 
 # Year Loop
-for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
+for (my $year=$lastupdate_year; $year <= $now->year; $year++) {
 	# Month loop
 	foreach my $month (1...12) {
 		# Skip month in resuming year
@@ -293,7 +328,8 @@ for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
 			
 		# Example URL http://192.168.0.77/stats/00ac8517-0961-11e1-99b9f25d750310ed.201207.xml
 		$statsurl = sprintf("http://$miniserveradmin:$miniserverpass\@$miniserverip:$miniserverport/stats/$loxuid.%04d%02d.xml", $year, $month);
-		logger(4, " Year $year Month $month Stats-URL $statsurl ");
+		my $statsurl_log = sprintf("http://$miniserveradmin:*****\@$miniserverip:$miniserverport/stats/$loxuid.%04d%02d.xml", $year, $month);
+		logger(4, "== DOWNLOAD == $month/$year with URL $statsurl_log ");
 		
 		# Fetching data with UserAgent
 		my $ua = LWP::UserAgent->new();
@@ -305,33 +341,79 @@ for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
 		}
 		
 		my $parser = XML::LibXML->new();
-			my $stats = XML::LibXML->load_xml( string => $response->content);
+		our $stats = XML::LibXML->load_xml( string => $response->content, 
+											   no_blanks => 1);
 		if ($@) {
 			logger(2, "Could not read XML (continuing with next month): $@");
 			# undef $stats;
 			# undef $parser;
 			next;
 		} else {
-			logger(4, "Seems that XML could be loaded");
+			logger(3, "=============== $month/$year === STARTED XML processing ===============================");
 		}
 		# Copy yearly
 		if ($month == 1) {
 			copyramdisk('Fast');
 		}
 		
-		
 		# In $stats we should have our XML now
 		# In case the XML root would be changed
 		##my @nodes = $stats->findnodes('/Statistics');
 		##my $node = @nodes[0];
 		
-		my $node = $stats->getDocumentElement;
+		our $root = $stats->getDocumentElement;
 		
-		# $node->{Name} returns the name of the sensor
+		# $root->{Name} returns the name of the sensor
 		# logger(4, "Node " . $node->{Name});
 		
-		my @dataset = $node->getChildrenByTagName("S");
+		our @dataset = $root->getChildrenByTagName("S");
 				
+		##################
+		# Interpolation
+		##################
+		# Decide if we need to interpolate or not. This is depending on the step sizes and Loxone statistic type
+		# 1, "Jede Änderung (max. ein Wert pro Minute)",
+		# 2, "Mittelwert pro Minute",
+		# 3, "Mittelwert pro 5 Minuten",
+		# 4, "Mittelwert pro 10 Minuten",
+		# 5, "Mittelwert pro 30 Minuten",
+		# 6, "Mittelwert pro Stunde",
+		# 7, "Digital/Jede Änderung");
+		
+		# Conditions 
+		# 1 and 7 need to be filled up in rrd_step interval anyhow
+		# For 7, additionally the last node has to be duplicated at epoch-1
+		# 2 to 6 need to be filled up if rrd_step < steptype
+		
+		if ($statstype == 1 || $statstype == 7 || $rrd_step < $StatSteps{$statstype}) {
+			logger(3, "   Interpolation started to fill up missing values - Raw data: " . keys @dataset);
+			my $interpolation_count = 0;
+			
+			# Interpolate from last node of last working month to first current node, using the last node of the last month
+			if ($last_node_from_last_month) {
+				$interpolation_count+= interpolate($last_node_from_last_month, $root->firstChild, $last_node_from_last_month->{V});
+				logger (4, "    Last month data: " . $last_node_from_last_month->{T} . " Value: " . $last_node_from_last_month->{V});
+			}
+			
+			# Interpolate between values and at the end of the month
+			foreach $data (@dataset) {
+				my $nextnode = $data->nextSibling();
+				$interpolation_count+= interpolate($data, $nextnode, $data->{V});
+			}
+			
+			
+			
+			our @dataset = $root->getChildrenByTagName("S");
+		
+			logger(3, "   Interpolation finished - Added data: $interpolation_count, Data count now " . keys @dataset);
+			
+					
+		# End of interpolation
+		}
+		
+		# Save the latest node of this month for possible interpolation in the next month
+		our $last_node_from_last_month = $root->lastChild;
+		
 		# Loop data
 		# $data is each statistic datapoint
 		#
@@ -376,11 +458,11 @@ for (my $year=$lastupdate_year; $year <= $now_dt->year; $year++) {
 		my $end_run = time();
 		my $run_time = $end_run - $start_run;
 	
-		logger (3, "   Month $month/$year has overall $data_counter datapoints updated in " . ceil($run_time) . " seconds.");
-		
+		logger (3, "   $data_counter datapoints updated in " . ceil($run_time) . " seconds.");
+		logger (3, "=============== $month/$year === FINISHED =============================================");
 		# We have to break out of the loop if we have reached the current year/month
 		# Issue - if current month/year fails, this code is never reached to quit loop
-		if ($year == $now_dt->year && $month == $now_dt->month) {
+		if ($year == $now->year && $month == $now->mon) {
 			last;
 		}
 	# End of month loop
@@ -402,7 +484,8 @@ if (-e "/run/$db_nr.rrd") {
 #######################################################
 # RRD Update
 #######################################################
-sub rrdupdate {
+sub rrdupdate 
+{
 
 	logger (3, "    --> $data_counter Datapoints prepared for RRD update ...");
 	# logger (4, $data_value_string);
@@ -413,6 +496,88 @@ sub rrdupdate {
 		logger(1, "Error processing rrds::update: $ERR");
 	}	
 	undef @data_value_array;
+}
+
+#####################################################
+# Interpolation 
+# Used globals: 
+# 	$stats (DOM-Object)
+#	$root (Root element of DOM)
+#	$rrd_step (Step size of RRD)
+#	$statstype
+# 	$interpolation_count
+# Parameters:
+# 1. current node
+# 2. next node
+# 3. value
+# If 'current node' is undefined, filling up before first node of root
+# If 'next node' is undefined, filling up after last node of root
+#####################################################
+sub interpolate
+{
+	my ($currentnode, $nextnode, $value) = @_;
+	
+	my $counter=0;
+	my $node_time;
+	my $next_time;
+	
+	#logger (4, "    Current --> $currentnode");
+	#logger (4, "    Next    --> $nextnode");
+	
+	
+	if ((! $currentnode) && (! $nextnode)) {
+		return 0;
+	}
+	
+	if ($currentnode && $nextnode) {
+		$node_time = Time::Piece->strptime ($currentnode->{T}, "%Y-%m-%d %T");
+		$next_time = Time::Piece->strptime ($nextnode->{T}, "%Y-%m-%d %T");
+	} elsif (! $currentnode) {
+		$next_time = Time::Piece->strptime ($nextnode->{T}, "%Y-%m-%d %T");
+		$node_time = Time::Piece->strptime ($next_time->year . "-" . $next_time->mon, "%Y-%m");
+		# logger(4, "    XXX Currentnode not set --> start time $node_time next time $next_time");
+	} else {
+		$node_time = Time::Piece->strptime ($currentnode->{T}, "%Y-%m-%d %T");
+		$next_time = Time::Piece->strptime ($node_time->year . "-" . $node_time->mon, "%Y-%m");
+		$next_time = $next_time->add_months(1) - 1;
+		# logger(4, "    XXX Nextnode not set --> start time $node_time next time $next_time");
+		
+	}
+	
+	
+	#logger (4, "    Calculated start: " . $node_time);
+	#logger (4, "    Calculated end:   " . $next_time);
+	
+	# my $currenttime = localtime;
+	if ($next_time > Time::Piece->localtime) {
+		$next_time = Time::Piece->localtime;
+	}
+	
+	for (my $stepper = ($node_time+$rrd_step); $stepper < ($next_time); $stepper+=$rrd_step) {
+		# logger(4, "Intepolation value: " . $stepper->strftime("%Y-%m-%d %T"));
+		my $insertnode = $stats->createElement('S');
+		$insertnode->{T} = $stepper->strftime("%Y-%m-%d %T");
+		$insertnode->{V} = $value;
+		if ($nextnode) {
+			$root->insertBefore( $insertnode, $nextnode );
+			# logger(4, "    $insertnode InsertBEFORE $nextnode");
+		} else {
+			$root->insertAfter( $insertnode, undef );
+			# logger(4, "    $insertnode InsertAFTER (at the end)");
+		}
+		$counter++;
+	}
+	# Finally, if statstype is 7, add the last value at nextnode-time -1
+	if ($statstype == 7 && $currentnode && $nextnode) {
+		my $insertnode = $stats->createElement('S');
+		my $lastbeforechange = $next_time-1;
+		$insertnode->{T} = $lastbeforechange->strftime("%Y-%m-%d %T");
+		$insertnode->{V} = $value;
+		$root->insertBefore( $insertnode, $nextnode);
+		$counter++;
+	}
+	
+	return $counter;
 }
 
 #####################################################
@@ -427,36 +592,36 @@ sub rrdupdate {
 # 4 Full debug
 # 5 Send everything to STDERR
 
-	sub openlogfile
-	{
-		if ( $loglevel > 0 ) {
-			open $lf, ">>", $logfilepath
-				or do {
-					# If logfile cannot be created, change loglevel to 5 (STDERR)
-					print STDERR "ERROR: Stats4Lox Import - Could not create logfile $logfilepath";
-					$loglevel = 5;
-				}
-		}
-		@loglevels = ("NOLOG", "ERROR", "WARNING", "INFO", "DEBUG");
+sub openlogfile
+{
+	if ( $loglevel > 0 ) {
+		open $lf, ">>", $logfilepath
+			or do {
+				# If logfile cannot be created, change loglevel to 5 (STDERR)
+				print STDERR "ERROR: Stats4Lox Import - Could not create logfile $logfilepath";
+				$loglevel = 5;
+			}
 	}
+	@loglevels = ("NOLOG", "ERROR", "WARNING", "INFO", "DEBUG");
+}
 
-	sub logger 
-	{
-		my ($level, $message) = @_;
-		
-		# Heavily reduces performance - only for debugging!
-		# $memusage = ceil(get_current_process_memory()/1024) . " KiB";
-		
-		if ( $loglevel == 5 ) {
-			($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
-			my $now_string = sprintf("%04d-%02d-%02d %02d:%02d:%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec);
-			print STDERR "$now_string $memusage Stats4Lox import.cgi $loglevels[$level]: $message\r\n";
-		} elsif ( $level <= $loglevel && $loglevel <= 4) {
-			($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
-			my $now_string = sprintf("%04d-%02d-%02d %02d:%02d:%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec);
-			print $lf "$now_string $memusage $loglevels[$level]: $message\r\n";
-		}
+sub logger 
+{
+	my ($level, $message) = @_;
+	
+	# Heavily reduces performance - only for debugging!
+	# $memusage = ceil(get_current_process_memory()/1024) . " KiB";
+	
+	if ( $loglevel == 5 ) {
+		($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
+		my $now_string = sprintf("%04d-%02d-%02d %02d:%02d:%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec);
+		print STDERR "$now_string $memusage Stats4Lox import.pl $loglevels[$level]: $message\r\n";
+	} elsif ( $level <= $loglevel && $loglevel <= 4) {
+		($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
+		my $now_string = sprintf("%04d-%02d-%02d %02d:%02d:%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec);
+		print $lf "$now_string $memusage $loglevels[$level]: $message\r\n";
 	}
+}
 
 #############################################################
 # copyramdisk	
