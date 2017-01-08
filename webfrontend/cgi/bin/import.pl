@@ -18,36 +18,33 @@
 
 # Programmablaufplan
 # 
-# OK Initiale Pfade berechnen
-# OK Commandline-Parameter lesen
-# OK Logfile initialisieren
-# OK Umbenennen des Jobs in .running
-# OK Job lesen
-# OK Miniserver-Credentials aus Loxberry-DB lesen
-# OK RRD-Pfad aus Statistik-DB auslesen (-->ist nur die Nummer, nicht notwendig)
-# NOK evt. RRD-Steps aus RRD-File lesen (-->aktuell nicht erforderlich)
-# OK Aus RRD letzten Timestamp lesen (epoch) und in Monat/Jahr umrechnen
-# Loop über Monat/Jahr bis heute
-#	Datenfile als XML vom MS holen
-#   Loop
-#		Ergänzen des XML um Zeit in Epoch
-#		evt. INSERT für relationale DB erstellen
-#	Abhängig vom Statstype
-#		-> Werte interpolieren und ins XML-Objekt schreiben
-#	Loop 
-#		Commandline mit Datensätzen erstellen
-#	Datensätze schreiben
-# Job aufräumen
-# evt. Polling starten
+# OK 	Initiale Pfade berechnen
+# OK 	Commandline-Parameter lesen
+# OK 	Logfile initialisieren
+# OK 	Umbenennen des Jobs in .running.PID
+# OK 	Job lesen
+# OK 	Miniserver-Credentials aus Loxberry-DB lesen
+# OBS 	RRD-Pfad aus Statistik-DB auslesen (-->ist nur die Nummer, nicht notwendig)
+# OK 	evt. RRD-Steps aus RRD-File lesen 
+# OK 	Aus RRD letzten Timestamp lesen (epoch) und in Monat/Jahr umrechnen
+# OK 	Loop über Monat/Jahr bis heute
+# OK  		Datenfile als XML vom MS holen
+# OK  		Loop
+# OBS  			Ergänzen des XML um Zeit in Epoch (-> nicht erforderlich)
+#    			evt. INSERT für relationale DB erstellen
+# OK			Abhängig vom Statstype
+# OK			-> Werte interpolieren und ins XML-Objekt schreiben
+# OK   			Loop 
+# OK     			Commandline mit Datensätzen erstellen
+# OK 				Datensätze schreiben
+# OK 	Job aufräumen
+#     	evt. Polling starten
 
 # 
 # Tools 
 # Online RRD drawer http://rrdwizard.appspot.com/import.php
 # Online Epoch converter http://www.epochconverter.com/
 # Perl Time::Piece http://search.cpan.org/~esaym/Time-Piece-1.31/Piece.pm
-
-
-
 
 #use strict;
 #use warnings;
@@ -56,6 +53,7 @@
 # Modules
 ##########################################################################
 
+use Error qw(:try);
 use LWP::UserAgent;
 use String::Escape qw( unquotemeta );
 use URI::Escape;
@@ -79,7 +77,6 @@ use Time::HiRes qw/ time sleep /;
 our $logfilepath; 
 our $lf;
 our @loglevels;
-our $loglevel=5;
 
 our	%StatTypes = ( 	1, "Jede Änderung (max. ein Wert pro Minute)",
 					2, "Mittelwert pro Minute",
@@ -97,18 +94,9 @@ our	%StatSteps = ( 	1, 60,
 					6, 3600,
 					7, 60);
 					
-					
-
-# Use RAM disk 
-# Parameters:
-# 'Dirty' - Do all processing in RAM Disk
-# 'Fast' - Copy back after every imported year
-# 'Save' - Copy back after every imported month
-# unset - off
-our $use_ram_disk='Save'; 
-
 # Use loglevel with care! DEBUG=4 really fills up logfile. Use ERRORS=1 or WARNINGS=2, or disable with 0.
 # To log everything to STDERR, use $loglevel=5.
+our $loglevel=4;
 
 ##########################################################################
 # Read Settings
@@ -154,7 +142,7 @@ openlogfile();
 logger(4, "Logfile $logfilepath opened");
 
 ####################################
-# Rename jobfile to .running
+# Rename jobfile to .running.$$
 ####################################
 
 # Check if the job file exists and is writeable
@@ -163,18 +151,18 @@ if (! -w "$job_basepath/$jobname.job") {
 	exit(1);
 }
 
-# Rename the job file (commented for debugging!)
-#if (! move("$job_basepath/$jobname.job", "$job_basepath/$jobname.running")) {
-#	logger(1, "Job $job_basepath/$jobname.job could not be renamed to .running - Terminating");
-#	exit(2);
-#}
+# Rename the job file
+if (! move("$job_basepath/$jobname.job", "$job_basepath/$jobname.running.$$")) {
+	logger(1, "Job $job_basepath/$jobname.job.$$ could not be renamed to .running - Terminating");
+	exit(2);
+}
 
 ###################################
 # Read job file
 ###################################
 
-#our $job = new Config::Simple("$job_basepath/$jobname.running");
-our $job = new Config::Simple("$job_basepath/$jobname.job");
+our $job = new Config::Simple("$job_basepath/$jobname.running.$$");
+# our $job = new Config::Simple("$job_basepath/$jobname.job");
 
 my $loxonename = $job->param("loxonename");
 my $loxuid = $job->param("loxuid");
@@ -188,6 +176,19 @@ my $category = $job->param("category");
 my $ms_nr = $job->param("ms_nr");
 my $db_nr = sprintf("%04d", $job->param("db_nr"));
 my $import_epoch = $job->param("import_epoch");
+my $job_useramdisk = $job->param("useramdisk");
+my $job_loglevel = $job->param("loglevel");
+
+$job->param("Last status",	"Running");
+$job->write();
+
+# Use RAM disk 
+# Parameters:
+# 'Dirty' - Do all processing in RAM Disk
+# 'Fast' - Copy back after every imported year
+# 'Save' - Copy back after every imported month
+# unset - off
+our $use_ram_disk='Save'; 
 
 # Check the important values for further processing
 logger(3, "JOB $jobname for statistic $loxonename ($place/$category) on Miniserver $ms_nr, statistic db is $db_nr");
@@ -196,6 +197,8 @@ if ($db_nr < 1) 		{ logger(1, "RRD DB number not defined - Terminating"); exit(4
 if (! $loxuid)			{ logger(1, "Loxone UID not defined - Terminating"); exit(5);}
 if ($statstype < 1)		{ logger(1, "Loxone Statistic type not defined - Terminating"); exit(6);}
 if ($statstype > 7)		{ logger(2, "This Loxone statistic has an UNSUPPORTED statistic type. Continuing ... but I've told you!"); }
+if ($job_useramdisk)	{ $use_ram_disk = $job_useramdisk; }
+if ($job_loglevel)		{ $loglevel = $job_loglevel; }
 
 ###################################
 # Read Miniserver credentials
@@ -475,11 +478,24 @@ for (my $year=$lastupdate_year; $year <= $now->year; $year++) {
 copyramdisk('Save');
 copyramdisk('Fast');
 copyramdisk('Dirty');
-# Delete file from RAM-Disk
-if (-e "/run/$db_nr.rrd") {
-	unlink "/run/$db_nr.rrd";
+
+$job->param("Last status",	"Finished!");
+$job->write();
+
+# Rename the job file
+if (! move("$job_basepath/$jobname.running.$$", "$job_basepath/$jobname.finished")) {
+	logger(2, "Job $job_basepath/$jobname.running.$$ could not be renamed to .finished.");
 }
-		
+logger(3, "=== Job finished. ===");
+
+# Cleaning up RAM-Disk in every case
+END 
+{
+	# Delete file from RAM-Disk
+	if (-e "/run/$db_nr.rrd") {
+		unlink "/run/$db_nr.rrd";
+	}
+}		
 
 #######################################################
 # RRD Update
@@ -543,7 +559,6 @@ sub interpolate
 		# logger(4, "    XXX Nextnode not set --> start time $node_time next time $next_time");
 		
 	}
-	
 	
 	#logger (4, "    Calculated start: " . $node_time);
 	#logger (4, "    Calculated end:   " . $next_time);

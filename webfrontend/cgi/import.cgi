@@ -376,7 +376,7 @@ sub save
 					# Addstat successfully called 
 					
 					# Check if a job is already running
-					if (! -e "$job_basepath/$loxuid.running" ) {
+					if (! glob("$job_basepath/$loxuid.running.*" )) {
 						# Not running - create job
 						$job = new Config::Simple(syntax=>'ini');
 						$job->param("loxonename", 	$loxonename);
@@ -391,6 +391,9 @@ sub save
 						$job->param("ms_nr",		$stat_ms);
 						$job->param("db_nr",		$resp_dbnr);
 						$job->param("import_epoch",	"0");
+						$job->param("useramdisk",	"Fast");
+						$job->param("loglevel",		"4");
+						$job->param("Last status",	"Scheduled");
 						$job->write("$job_basepath/$loxuid.job") or logger (1, "Could not create job file for $loxonename with DB number $resp_dbnr");
 						undef $job;
 					} else { 
