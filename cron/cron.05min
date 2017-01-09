@@ -7,7 +7,7 @@ then
   /usr/bin/perl fetch.pl -step 300
 fi
 
-# Data import scheduler
+# Data import scheduler - run next job
 
 jobnr=$(ls -d REPLACEINSTALLFOLDER/data/plugins/REPLACEFOLDERNAME/import/*.job | wc -l)
 	

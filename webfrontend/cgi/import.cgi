@@ -465,10 +465,10 @@ sub generate_import_table
 				
 		$statstable .= '
 			  <tr>
-				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Title}) . '<input type="hidden" name="title_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{Title} . '"></td>
-				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Desc}) . '<input type="hidden" name="desc_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{Desc} . '"></td>
-				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Place}) . '<input type="hidden" name="place_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{Place} . '"></td>
-				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Category}) . '<input type="hidden" name="category_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{Category} . '"></td>
+				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Title}) . '<input type="hidden" name="title_' . $table_linecount . '" value="' . encode_entities($lox_statsobject{$statsobj}{Title}) . '"></td>
+				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Desc}) . '<input type="hidden" name="desc_' . $table_linecount . '" value="' . encode_entities($lox_statsobject{$statsobj}{Desc}) . '"></td>
+				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Place}) . '<input type="hidden" name="place_' . $table_linecount . '" value="' . encode_entities($lox_statsobject{$statsobj}{Place}) . '"></td>
+				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Category}) . '<input type="hidden" name="category_' . $table_linecount . '" value="' . encode_entities($lox_statsobject{$statsobj}{Category}) . '"></td>
 				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{StatsType} . '<input type="hidden" name="statstype_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{StatsType} . '"></td>
 				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{MinVal} . '<input type="hidden" name="minval_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MinVal} . '"></td>
 				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{MaxVal} . '<input type="hidden" name="maxval_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MaxVal} . '"></td>

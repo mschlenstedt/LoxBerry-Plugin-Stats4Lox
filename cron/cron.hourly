@@ -6,3 +6,12 @@ then
   cd REPLACEINSTALLFOLDER/webfrontend/cgi/plugins/REPLACEFOLDERNAME/bin/
   /usr/bin/perl fetch.pl -step 3600
 fi
+
+# Data import scheduler - Clean up hanging
+
+jobnr=$(ls -d REPLACEINSTALLFOLDER/data/plugins/REPLACEFOLDERNAME/import/*.running.* | wc -l)
+	
+if [ $jobnr -ne 0 ]
+	then 
+		perl REPLACEINSTALLFOLDER/webfrontend/cgi/plugins/REPLACEFOLDERNAME/bin/scheduler.pl
+fi

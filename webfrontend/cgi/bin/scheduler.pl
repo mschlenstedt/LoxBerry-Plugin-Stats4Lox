@@ -67,6 +67,6 @@ foreach $job (@joblist) {
 		my($jobname, $fileext) = (split /\./, $filename)[0, 1];
 		print "Stats4Lox Import: Starting job $jobname\n";
 		$numrunningjobs++;
-		system("/usr/bin/perl $home/webfrontend/cgi/plugins/$psubfolder/bin/import.pl --job=$jobname 2>&1 &");
+		system("/usr/bin/perl $home/webfrontend/cgi/plugins/$psubfolder/bin/import.pl --job=$jobname &");
 	}
 }

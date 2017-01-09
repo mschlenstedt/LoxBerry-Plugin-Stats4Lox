@@ -62,6 +62,7 @@ use Getopt::Long;
 use Config::Simple;
 use File::HomeDir;
 use File::Copy;
+use File::Path qw(make_path);
 use Cwd 'abs_path';
 use DateTime;
 use RRDs;
@@ -70,7 +71,7 @@ use POSIX qw(ceil);
 # use DateTime::Format::ISO8601;
 use Time::Piece;
 use Time::HiRes qw/ time sleep /;
-
+ 
 
 # Logfile
 our $logfilepath; 
@@ -194,10 +195,13 @@ $job->write();
 # 'Fast' - Copy back after every imported year
 # 'Save' - Copy back after every imported month
 # unset - off
-our $use_ram_disk='Save'; 
+our $use_ram_disk = 'Save'; 
+our $ramdiskpath = '/dev/shm/stats4loximport';
 
 # Check the important values for further processing
 logger(3, "JOB $jobname for statistic $loxonename ($place/$category) on Miniserver $ms_nr, statistic db is $db_nr");
+logger(3, "JOB Statistic Type is $statstype ($StatTypes{$statstype})");
+
 if ($ms_nr < 1) 		{ logger(1, "Miniserver not defined - Terminating"); exit(3);}
 if ($db_nr < 1) 		{ logger(1, "RRD DB number not defined - Terminating"); exit(4);}
 if (! $loxuid)			{ logger(1, "Loxone UID not defined - Terminating"); exit(5);}
@@ -259,13 +263,14 @@ if (-S "/var/run/rrdcached.sock") {
 
 # Try to use RAM disk for processing
 if ($use_ram_disk) {
-	logger(3, "RAM-Disk usage enabled with $use_ram_disk. Initializing RAM-Disk copy of database");
-	if ((copy($rrdfile, "/run/") && -e "/run/") && (-w "/run/$db_nr.rrd")) {
-		logger(3, " --> RAM-Disk copy initialized in /run/");
+	logger(3, "RAM-Disk usage enabled with mode '$use_ram_disk'. Initializing RAM-Disk copy of database");
+	make_path($ramdiskpath);
+	if ((copy($rrdfile, "$ramdiskpath/") && -e "$ramdiskpath/") && (-w "$ramdiskpath/$db_nr.rrd")) {
+		logger(3, " --> RAM-Disk copy initialized in $ramdiskpath");
 		our $persistent_rrdfile = $rrdfile;
-		$rrdfile = "/run/$db_nr.rrd";
+		$rrdfile = "$ramdiskpath/$db_nr.rrd";
 	} else {
-		logger(2, " --> Could not initialize RAM-Disk copy - Continuing with direct disk write");
+		logger(2, " --> Could not initialize RAM-Disk copy on $ramdiskpath - Continuing with direct disk write");
 	}
 }
 
@@ -498,8 +503,8 @@ logger(3, "=== Job finished. ===");
 END 
 {
 	# Delete file from RAM-Disk
-	if (-e "/run/$db_nr.rrd") {
-		unlink "/run/$db_nr.rrd";
+	if (-e "$ramdiskpath/$db_nr.rrd") {
+		unlink "$ramdiskpath/$db_nr.rrd";
 	}
 }		
 
