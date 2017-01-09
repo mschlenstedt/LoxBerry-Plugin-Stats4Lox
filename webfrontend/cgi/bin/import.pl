@@ -68,6 +68,7 @@ use DateTime;
 use RRDs;
 use POSIX qw(strftime);
 use POSIX qw(ceil);
+use POSIX qw(tzset);
 # use DateTime::Format::ISO8601;
 use Time::Piece;
 use Time::HiRes qw/ time sleep /;
@@ -124,6 +125,12 @@ my $lang            = $cfg->param("BASE.LANG");
 my $installfolder   = $cfg->param("BASE.INSTALLFOLDER");
 my $miniservers     = $cfg->param("BASE.MINISERVERS");
 my $clouddns        = $cfg->param("BASE.CLOUDDNS");
+my $timezone		= $cfg->param("TIMESERVER.ZONE");
+
+if ($timezone) {
+	$ENV{TZ} = $timezone;
+	tzset();
+}
 
 #
 # Commandline options
@@ -228,8 +235,8 @@ if ($job_loglevel)		{ $loglevel = $job_loglevel; }
 	if ($miniserverclouddns) {
 		$output = qx($home/bin/showclouddns.pl $miniservermac);
 		@fields2 = split(/:/,$output);
-		$miniserverip   =  @fields2[0];
-		$miniserverport = @fields2[1];
+		$miniserverip   =  $fields2[0];
+		$miniserverport = $fields2[1];
 	}
 
 	logger(4, "Miniserver-IP $miniserverip:$miniserverport");
@@ -417,7 +424,7 @@ for (my $year=$lastupdate_year; $year <= $now->year; $year++) {
 			
 			
 			
-			our @dataset = $root->getChildrenByTagName("S");
+			@dataset = $root->getChildrenByTagName("S");
 		
 			logger(3, "   Interpolation finished - Added data: $interpolation_count, Data count now " . keys @dataset);
 			

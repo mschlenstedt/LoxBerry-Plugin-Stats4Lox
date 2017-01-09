@@ -22,26 +22,27 @@
 use CGI;
 use CGI::Carp qw(fatalsToBrowser);
 use CGI qw/:standard/;
-use LWP::UserAgent;
-use String::Escape qw( unquotemeta );
 use Config::Simple;
-use File::HomeDir;
 use Cwd 'abs_path';
-use URI::Escape;
-use XML::Simple qw(:strict);
-use warnings;
-
-# Christian Import
-use POSIX qw(strftime);
-use XML::LibXML;
-use File::stat;
 use File::Basename;
+use File::HomeDir;
 use File::Path qw(make_path);
-use Time::localtime;
+use File::stat;
 use HTML::Entities;
 use HTTP::Request;
-# Debug
+use LWP::UserAgent;
+use POSIX qw(strftime);
+use String::Escape qw( unquotemeta );
 use Time::HiRes qw/ time sleep /;
+use DateTime;
+use URI::Escape;
+use warnings;
+use XML::LibXML;
+use XML::Simple qw(:strict);
+
+# Christian Import
+# use Time::localtime;
+# Debug
 
 # Set maximum file upload to approx. 7 MB
 # $CGI::POST_MAX = 1024 * 10000;
@@ -84,6 +85,7 @@ $logfilepath = "$home/log/plugins/$psubfolder/import_cgi.log";
 openlogfile();
 logger(4, "Logfile $logfilepath opened");
 
+our $job_basepath = "$home/data/plugins/$psubfolder/import";
 
 my  $cfg             = new Config::Simple("$home/config/system/general.cfg");
 our $installfolder   = $cfg->param("BASE.INSTALLFOLDER");
@@ -93,6 +95,7 @@ our $clouddnsaddress = $cfg->param("BASE.CLOUDDNS");
 our $curlbin         = $cfg->param("BINARIES.CURL");
 our $grepbin         = $cfg->param("BINARIES.GREP");
 our $awkbin          = $cfg->param("BINARIES.AWK");
+our $timezone		 = $cfg->param("TIMESERVER.ZONE");
 
 # Generate MS table with IP as key
 # We need this to have a Loxone-UID -> IP -> Stats-DB matching/key
@@ -196,11 +199,11 @@ sub form {
 	# Check if a .LoxPLAN is already available
 		
 	if ( -e $loxconfig_path ) {
-		my $loxplan_modified = ctime(stat($loxconfig_path)->mtime);
+		my $loxchgtime = DateTime->from_epoch ( epoch => stat($loxconfig_path)->mtime, time_zone => $timezone );
 		readloxplan();
-		$upload_message = "Die aktuell hochgeladene Loxone-Konfiguration ist von $loxplan_modified. Du kannst eine neuere Version hochladen, oder diese verwenden.";
+		$upload_message = "Die zuletzt hochgeladene Loxone-Konfiguration ist von " . $loxchgtime->dmy . " " . $loxchgtime->hms . ". Du kannst eine neuere Version hochladen, oder die zuletzt hochgeladene verwenden.";
 	} else {
-		$upload_message = "Lade deine Loxone Konfiguration hoch. Daraus wird ausgelesen, welche Statistiken du aktuell aktiviert hast.";
+		$upload_message = "Lade deine Loxone Konfiguration (.loxone bzw. .LoxPlan Datei) hoch. Daraus wird ausgelesen, welche Statistiken du aktuell aktiviert hast.";
 	}
 
 	# Read Stat definitions and prepare dropdown string
@@ -214,7 +217,6 @@ sub form {
 			<option>Definition 3</option>
 			<option>Definition 4</option>
 		</select>';
-	
 	
 	our $table_linecount = 0;
 	generate_import_table();
@@ -314,11 +316,10 @@ sub save
 	# Looping through post formdata lines
 	
 	my $addstat_urlbase = "http://localhost/admin/plugins/$psubfolder/addstat.cgi";
-	my $job_basepath = "$home/data/plugins/$psubfolder/import";
 	
 	eval { make_path($job_basepath) };
 	if ($@) {
-		logger(1, "Couldn't create $dir: $@");
+		logger(1, "Couldn't create $job_basepath: $@");
 	}
 	
 	
@@ -342,6 +343,7 @@ sub save
 			my $place = uri_escape( param("place_$line") );
 			my $category = uri_escape( param("category_$line") );
 			my $stat_ms = param("msnr_$line");
+			# URI-Escape has to be undone when writing the job!
 			
 			my $statfullurl = $addstat_urlbase . "?script=1&loxonename=$loxonename&description=$description&settings=$settings&miniserver=$stat_ms&minval=$minval&maxval=$maxval&place=$place&category=$category&uid=$loxuid";
 			logger(4, "addstat URL " . $statfullurl);
@@ -379,21 +381,24 @@ sub save
 					if (! glob("$job_basepath/$loxuid.running.*" )) {
 						# Not running - create job
 						$job = new Config::Simple(syntax=>'ini');
-						$job->param("loxonename", 	$loxonename);
+						$job->param("loxonename", 	uri_unescape($loxonename));
 						$job->param("loxuid", 		$loxuid);
 						$job->param("statstype", 	$statstype);
-						$job->param("description", 	$description);
+						$job->param("description", 	uri_unescape($description));
 						$job->param("settings",		$settings);
 						$job->param("minval",		$minval);
 						$job->param("maxval",		$maxval);
-						$job->param("place",		$place);
-						$job->param("category",		$category);
+						$job->param("place",		uri_unescape($place));
+						$job->param("category",		uri_unescape($category));
 						$job->param("ms_nr",		$stat_ms);
 						$job->param("db_nr",		$resp_dbnr);
 						$job->param("import_epoch",	"0");
 						$job->param("useramdisk",	"Fast");
 						$job->param("loglevel",		"4");
 						$job->param("Last status",	"Scheduled");
+						$job->param("try",			"1");
+						$job->param("maxtries",		"5");
+
 						$job->write("$job_basepath/$loxuid.job") or logger (1, "Could not create job file for $loxonename with DB number $resp_dbnr");
 						undef $job;
 					} else { 
@@ -455,6 +460,52 @@ sub saveloxplan
 
 sub generate_import_table 
 {
+	# Define Row colors for import state
+	my %ImportStates = (
+		"none" 		=> "white", 
+		"failed" 	=> "#ffa0a0",
+		"scheduled"	=> "#d3d3d3",
+		"running"	=> "#d9ff1e",
+		"finished"	=> "#a2f99d"
+		);
+	
+	# Get job status from file system
+	
+	my @failedlist = <"$job_basepath/*.failed">;
+	my @finishedlist = <"$job_basepath/*.finished">;
+	my @joblist = <"$job_basepath/*.job">;
+	my @runninglist = <"$job_basepath/*.running.*">;
+	
+	foreach my $job (@failedlist) {
+	
+		my $jobname = get_jobname_from_filename($job);
+		if (exists $lox_statsobject{$jobname}) {
+			$lox_statsobject{$jobname}{TableColor} = $ImportStates{'failed'};
+		}
+	}
+	foreach my $job (@finishedlist) {
+	
+		my $jobname = get_jobname_from_filename($job);
+		if (exists $lox_statsobject{$jobname}) {
+			$lox_statsobject{$jobname}{TableColor} = $ImportStates{'finished'};
+		}
+	}
+	foreach my $job (@joblist) {
+	
+		my $jobname = get_jobname_from_filename($job);
+		if (exists $lox_statsobject{$jobname}) {
+			$lox_statsobject{$jobname}{TableColor} = $ImportStates{'scheduled'};
+		}
+	}
+	foreach my $job (@runninglist) {
+	
+		my $jobname = get_jobname_from_filename($job);
+		if (exists $lox_statsobject{$jobname}) {
+			$lox_statsobject{$jobname}{TableColor} = $ImportStates{'running'};
+		}
+	}
+		
+	# Loop the statistic objects
 	foreach my $statsobj (keys %lox_statsobject) {
 		$table_linecount = $table_linecount + 1;
 			
@@ -462,9 +513,13 @@ sub generate_import_table
 		# UNFINISHED 
 		# Set Statistic Definitions from Michael
 		$statdef = "1";
+		
+		if (! $lox_statsobject{$statsobj}{TableColor}) {
+			$lox_statsobject{$statsobj}{TableColor} = $ImportStates{'none'};
+		}
 				
 		$statstable .= '
-			  <tr>
+			  <tr bgcolor="' . $lox_statsobject{$statsobj}{TableColor} . '">
 				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Title}) . '<input type="hidden" name="title_' . $table_linecount . '" value="' . encode_entities($lox_statsobject{$statsobj}{Title}) . '"></td>
 				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Desc}) . '<input type="hidden" name="desc_' . $table_linecount . '" value="' . encode_entities($lox_statsobject{$statsobj}{Desc}) . '"></td>
 				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Place}) . '<input type="hidden" name="place_' . $table_linecount . '" value="' . encode_entities($lox_statsobject{$statsobj}{Place}) . '"></td>
@@ -483,6 +538,16 @@ sub generate_import_table
 			';
 	}
 }
+
+# Return Job name from filename
+sub get_jobname_from_filename
+{
+	my($jobpath) = @_;
+	my($filename, $dirs, $suffix) = fileparse($jobpath);
+	return (split /\./, $filename)[0];
+}
+
+
 
 
 #####################################################
