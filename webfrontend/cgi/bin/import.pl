@@ -1,6 +1,6 @@
 ﻿#!/usr/bin/perl
 
-# fetch.pl
+# import.pl
 
 # Copyright 2017 Christian Fenzl, christiantf@gmx.at
 #
@@ -113,6 +113,8 @@ $psubfolder = 'stats4lox';
 
 # my $home = File::HomeDir->my_home;
 $home = '/opt/loxberry';
+# Issues with running from command line
+
 
 print STDERR "Home: $home Pluginsubfolder $psubfolder\n";
 my $job_basepath = "$home/data/plugins/$psubfolder/import";
