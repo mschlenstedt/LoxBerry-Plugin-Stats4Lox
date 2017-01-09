@@ -53,7 +53,6 @@
 # Modules
 ##########################################################################
 
-use Error qw(:try);
 use LWP::UserAgent;
 use String::Escape qw( unquotemeta );
 use URI::Escape;
@@ -157,6 +156,11 @@ if (! -w "$job_basepath/$jobname.job") {
 if (! move("$job_basepath/$jobname.job", "$job_basepath/$jobname.running.$$")) {
 	logger(1, "Job $job_basepath/$jobname.job.$$ could not be renamed to .running - Terminating");
 	exit(2);
+}
+
+if (! -s "$job_basepath/$jobname.running.$$") {
+	logger(1, "Job $jobname is empty $job_basepath - Terminating");
+	exit(1);
 }
 
 ###################################
