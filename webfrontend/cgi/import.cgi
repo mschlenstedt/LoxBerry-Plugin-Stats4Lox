@@ -68,7 +68,14 @@ our $loglevel=4;
 
 # Use loglevel with care! DEBUG=4 really fills up logfile. Use ERRORS=1 or WARNINGS=2, or disable with 0.
 # To log everything to STDERR, use $loglevel=5.
-		
+
+our %StatTypes = ( 	1, "Jede Änderung (max. ein Wert pro Minute)",
+					2, "Mittelwert pro Minute",
+					3, "Mittelwert pro 5 Minuten",
+					4, "Mittelwert pro 10 Minuten",
+					5, "Mittelwert pro 30 Minuten",
+					6, "Mittelwert pro Stunde",
+					7, "Digital/Jede Änderung");		
 
 ##########################################################################
 # Read Settings
@@ -517,18 +524,20 @@ sub generate_import_table
 		if (! $lox_statsobject{$statsobj}{TableColor}) {
 			$lox_statsobject{$statsobj}{TableColor} = $ImportStates{'none'};
 		}
-				
+		
+		# Tabellenbug! OFFEN! Farbe wird nicht mitsortiert!
+		
 		$statstable .= '
 			  <tr bgcolor="' . $lox_statsobject{$statsobj}{TableColor} . '">
 				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Title}) . '<input type="hidden" name="title_' . $table_linecount . '" value="' . encode_entities($lox_statsobject{$statsobj}{Title}) . '"></td>
 				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Desc}) . '<input type="hidden" name="desc_' . $table_linecount . '" value="' . encode_entities($lox_statsobject{$statsobj}{Desc}) . '"></td>
 				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Place}) . '<input type="hidden" name="place_' . $table_linecount . '" value="' . encode_entities($lox_statsobject{$statsobj}{Place}) . '"></td>
 				<td class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Category}) . '<input type="hidden" name="category_' . $table_linecount . '" value="' . encode_entities($lox_statsobject{$statsobj}{Category}) . '"></td>
-				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{StatsType} . '<input type="hidden" name="statstype_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{StatsType} . '"></td>
-				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{MinVal} . '<input type="hidden" name="minval_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MinVal} . '"></td>
-				<td class="tg-yw4l">' . $lox_statsobject{$statsobj}{MaxVal} . '<input type="hidden" name="maxval_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MaxVal} . '"></td>
+				<td align="center" class="tg-yw4l" title="' . $StatTypes{$lox_statsobject{$statsobj}{StatsType}} . '"><div class="tooltip">' . $lox_statsobject{$statsobj}{StatsType} .  '</div><input type="hidden" name="statstype_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{StatsType} . '"></td>
+				<td align="center" class="tg-yw4l">' . $lox_statsobject{$statsobj}{MinVal} . '<input type="hidden" name="minval_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MinVal} . '"></td>
+				<td align="center" class="tg-yw4l">' . $lox_statsobject{$statsobj}{MaxVal} . '<input type="hidden" name="maxval_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MaxVal} . '"></td>
 				<td class="tg-yw4l">' . $statdef_dropdown . '<input type="hidden" name="statdef_' . $table_linecount . '" value="' . $statdef . '"></td>
-				<td class="tg-yw4l"> 
+				<td align="center" class="tg-yw4l"> 
 				<input data-mini="true" type="checkbox" name="doimport_' . $table_linecount . '" value="import">
 				<input type="hidden" name="msnr_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MSNr} . '">
 				<input type="hidden" name="msip_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MSIP} . '">
@@ -558,20 +567,9 @@ sub readloxplan
 {
 
 	my @loxconfig_xml;
-	my %StatTypes;
 	my %lox_miniserver;
 	my %lox_category;
 	my %lox_room;
-	
-
-	%StatTypes = ( 	1, "Jede Änderung (max. ein Wert pro Minute)",
-					2, "Mittelwert pro Minute",
-					3, "Mittelwert pro 5 Minuten",
-					4, "Mittelwert pro 10 Minuten",
-					5, "Mittelwert pro 30 Minuten",
-					6, "Mittelwert pro Stunde",
-					7, "Digital/Jede Änderung");
-
 	my $start_run = time();
 
 	# For performance, it would be possibly better to switch from XML::LibXML to XML::Twig
