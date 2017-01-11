@@ -60,6 +60,7 @@ use XML::Simple qw(:strict);
 use XML::LibXML;
 use Getopt::Long;
 use Config::Simple;
+use File::Basename;
 use File::HomeDir;
 use File::Copy;
 use File::Path qw(make_path);
@@ -139,9 +140,20 @@ if ($timezone) {
 my $jobname = '';
 
 GetOptions ('loglevel=s' => \$loglevel,
-            'job=s' => \$jobname
+            'job=s' => \$jobname,
+			'file=s' => \$jobfile
             );
 
+if 	($jobfile) {
+	my($filename, $dirs, $suffix) = fileparse($jobfile);
+	($jobname) = (split /\./, $filename)[0];
+	# print STDERR "Jobile: $jobfile Jobname: $jobname \n";
+
+	# move ("$jobfile", "$job_basepath/$jobname.job");
+}		
+			
+			
+			
 #
 # Initialize logfile
 #
@@ -155,16 +167,22 @@ logger(4, "Logfile $logfilepath opened");
 ####################################
 
 # Check if the job file exists and is writeable
-if (! -w "$job_basepath/$jobname.job") {
+if ((! -w "$job_basepath/$jobname.job") && (! $jobfile)) {
 	logger(1, "Job $jobname does not exist or not writeable in $job_basepath - Terminating");
 	exit(1);
 }
 
 # Rename the job file
-if (! move("$job_basepath/$jobname.job", "$job_basepath/$jobname.running.$$")) {
-	logger(1, "Job $job_basepath/$jobname.job.$$ could not be renamed to .running - Terminating");
+if ((! $jobfile) && (! move("$job_basepath/$jobname.job", "$job_basepath/$jobname.running.$$"))) {
+	logger(1, "Job $job_basepath/$jobname.job could not be renamed to .running.$$ - Terminating");
 	exit(2);
 }
+if (($jobfile) && (! move("$jobfile", "$job_basepath/$jobname.running.$$"))) {
+	logger(1, "Jobfile $jobfile could not be renamed to .running.$$ - Terminating");
+	exit(2);
+}
+
+
 
 if (! -s "$job_basepath/$jobname.running.$$") {
 	logger(1, "Job $jobname is empty $job_basepath - Terminating");
@@ -208,6 +226,7 @@ our $ramdiskpath = '/dev/shm/stats4loximport';
 # Check the important values for further processing
 logger(3, "JOB $jobname for statistic $loxonename ($place/$category) on Miniserver $ms_nr, statistic db is $db_nr");
 logger(3, "JOB Statistic Type is $statstype ($StatTypes{$statstype})");
+logger(3, "== Full job path currently is $job_basepath/$jobname.running.$$ ==");
 
 if ($ms_nr < 1) 		{ logger(1, "Miniserver not defined - Terminating"); exit(3);}
 if ($db_nr < 1) 		{ logger(1, "RRD DB number not defined - Terminating"); exit(4);}
