@@ -1,0 +1,48 @@
+	<div id="graph_<!--$dbnr-->"></div>
+	<script type="text/javascript">
+		var graph_opts={
+			legend: { noColumns:4}};
+		var ds_graph_opts={
+			'value-GAUGE':{ 
+					title: '<!--$unique_name-->',
+					color: "#ff8000",
+					label: '<!--$unique_name-->',
+					lines: { show: true, fill: false, fillColor:"#ffff80"} }
+		/*	'value-MIN':{
+					label: 'Min', 
+					color: "#00c0c0",
+					lines: { show: true, fill: false} },
+			'value-MAX':{
+					label: 'Max', 
+					color: "#c000c0",
+					lines: { show: true, fill: false} } */
+			};
+		var rrdflot_defaults={ 
+			graph_only: false,
+			legend: "Top",
+			num_cb_rows: 9, 
+			use_element_buttons: true,
+			multi_ds:true, 
+			multi_rra: true,
+			use_rra: true, 
+			rra:1, 
+			use_checked_DSs: true,
+			//If multi_ds is off, don't need to include "-GAUGE" in element names
+			checked_DSs: ["value-GAUGE"],
+			use_windows:false, 
+			window_min:1241752800000,
+			window_max:1241974500000,
+			graph_width:"700px",
+			graph_height:"300px",
+			scale_width:"350px",
+			scale_height:"200px",
+			timezone:<!--$tz-->};
+		//var rra_op_list = [0,1,2,     // all the originals
+		//					[2,604800]]; //1 week, based off RRA at index 2
+		//var rra_op_list = [0,1,2,3,4,5,6,7,8,9]; //1 week, based off RRA at index 2
+		var rra_op_list = null;
+
+		var fname="/plugins/<!--$psubfolder-->/databases/<!--$dbnr-->.rrd";
+		var flot_obj=new rrdFlotAsync("graph_<!--$dbnr-->",fname,null,graph_opts,ds_graph_opts,rrdflot_defaults,null,rra_op_list);
+
+		</script>

@@ -355,72 +355,95 @@ sub save
 			my $statfullurl = $addstat_urlbase . "?script=1&loxonename=$loxonename&description=$description&settings=$settings&miniserver=$stat_ms&minval=$minval&maxval=$maxval&place=$place&category=$category&uid=$loxuid";
 			logger(4, "addstat URL " . $statfullurl);
 			 
+# Quick and dirty DB duplicate search (Michael will add this in addstat.cgi)
 
-# Michael is changing the addstat interface from web call to local execution
-			 # HTTP Request
-			# logger (4, "UA Instance");
-			my $ua = LWP::UserAgent->new;
-			# logger (4, "REQ Instance");
-			#my $req = HTTP::Request->new(GET => $statfullurl);
-			# $req->header('content-type' => 'application/json');
-			# $req->header('x-auth-token' => 'kfksj48sdfj4jd9d');
-			 
-			# logger (4, "RESP Instance");
-			my $resp = $ua->get($statfullurl);
-			# logger (4, "IF Instance " . $resp->decoded_content );
-			
-			if ($resp->is_success) {
-				my $message = $resp->decoded_content;
-				logger (3, "Successful addstat http request");
-				logger (4, "HTTP reply: " . $message);
+			# Read Stats4Lox databases
+			# Re-used from Michael dbinfo.cgi
+			open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
+			my @data = <F>;
+			close (F) ;
 				
-				# Format addstat response to get useful output
-				my @stat_message = split /\+/, $message;
-				logger(4, "Resp_Status: $stat_message[3] Resp_Text $stat_message[6] Resp_DBID $stat_message[9]");
-				my $resp_status = $stat_message[3];
-				my $resp_message = $stat_message[6];
-				my $resp_dbnr = $stat_message[9];
-				if ($resp_status eq "OK" && $resp_dbnr > 0) {
-					logger(3, "addstat - RRD successfully created with DB-Nr $resp_dbnr");
-					# Addstat successfully called 
+			# Loop over DB
+			our $db_duplicate_exists = 0;
+			foreach (@data){
+				# my @single_template = @template;
+				s/[\n\r]//g;
+				# Comments
+				if ($_ =~ /^\s*#.*/) {
+					next;
+				}
+				@fields = split(/\|/);
+				
+				my $dbnr = $fields[0];
+				my $unique_name = $fields[3];
+				if (lc($unique_name) eq lc(uri_unescape($loxonename))) {
+					$db_duplicate_exists = $dbnr;
+					logger(3, "DB duplicate check: $unique_name already found with ID $dbnr");
+					last;
+				}
+			}
+			 
+			# If no duplicate, call addstat.cgi
+			if (! $db_duplicate_exists) {
+# Michael is changing the addstat interface from web call to local execution
+				# HTTP Request
+				my $ua = LWP::UserAgent->new;
+				my $resp = $ua->get($statfullurl);
+				if ($resp->is_success) {
+					my $message = $resp->decoded_content;
+					logger (3, "Successful addstat http request");
+					logger (4, "HTTP reply: " . $message);
 					
-					# Check if a job is already running
-					if (! glob("$job_basepath/$loxuid.running.*" )) {
-						# Not running - create job
-						$job = new Config::Simple(syntax=>'ini');
-						$job->param("loxonename", 	uri_unescape($loxonename));
-						$job->param("loxuid", 		$loxuid);
-						$job->param("statstype", 	$statstype);
-						$job->param("description", 	uri_unescape($description));
-						$job->param("settings",		$settings);
-						$job->param("minval",		$minval);
-						$job->param("maxval",		$maxval);
-						$job->param("place",		uri_unescape($place));
-						$job->param("category",		uri_unescape($category));
-						$job->param("ms_nr",		$stat_ms);
-						$job->param("db_nr",		$resp_dbnr);
-						$job->param("import_epoch",	"0");
-						$job->param("useramdisk",	"Fast");
-						$job->param("loglevel",		"4");
-						$job->param("Last status",	"Scheduled");
-						$job->param("try",			"1");
-						$job->param("maxtries",		"5");
-
-						$job->write("$job_basepath/$loxuid.job") or logger (1, "Could not create job file for $loxonename with DB number $resp_dbnr");
-						undef $job;
-					} else { 
-						# Running state - do not create new job
-						logger (2, "Job $loxonename ($loxuid) is currently in 'Running' state and will not be created again.");
-					}
-				} else {
+					# Format addstat response to get useful output
+					my @stat_message = split /\+/, $message;
+					logger(4, "Resp_Status: $stat_message[3] Resp_Text $stat_message[6] Resp_DBID $stat_message[9]");
+					my $resp_status = $stat_message[3];
+					my $resp_message = $stat_message[6];
+					$resp_dbnr = $stat_message[9];
+					if ($resp_status eq "OK" && $resp_dbnr > 0) {
+						logger(3, "addstat - RRD successfully created with DB-Nr $resp_dbnr");
+					# Addstat successfully called 
+					} else {
 					# Addstat running but failed
 					logger(2, "addstat not successfully. Returned $resp_status - $resp_message");
-				}
-			} else {
+					}
+				} else {
 				# Addstat URL Call failed
 				logger(1, "Calling addstat URL returns an error:");
 				logger(1, "HTTP GET error: " . $resp->code . " " . $resp->message);
-			}
+				}	
+			} else { $resp_dbnr = $db_duplicate_exists; }
+			
+			if ($resp_dbnr > 0)	{
+				# Check if a job is already running
+				if (! glob("$job_basepath/$loxuid.running.*" )) {
+					# Not running - create job
+					$job = new Config::Simple(syntax=>'ini');
+					$job->param("loxonename", 	uri_unescape($loxonename));
+					$job->param("loxuid", 		$loxuid);
+					$job->param("statstype", 	$statstype);
+					$job->param("description", 	uri_unescape($description));
+					$job->param("settings",		$settings);
+					$job->param("minval",		$minval);
+					$job->param("maxval",		$maxval);
+					$job->param("place",		uri_unescape($place));
+					$job->param("category",		uri_unescape($category));
+					$job->param("ms_nr",		$stat_ms);
+					$job->param("db_nr",		$resp_dbnr);
+					$job->param("import_epoch",	"0");
+					$job->param("useramdisk",	"Fast");
+					$job->param("loglevel",		"4");
+					$job->param("Last status",	"Scheduled");
+					$job->param("try",			"1");
+					$job->param("maxtries",		"5");
+					$job->write("$job_basepath/$loxuid.job") or logger (1, "Could not create job file for $loxonename with DB number $resp_dbnr");
+					undef $job;
+				} else { 
+					# Running state - do not create new job
+					logger (2, "Job $loxonename ($loxuid) is currently in 'Running' state and will not be created again.");
+				}
+			}	
+				
 		# End of activated lines loop
 		}
 	# End of lines loop
