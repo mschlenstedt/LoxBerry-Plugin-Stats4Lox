@@ -229,13 +229,31 @@ sub form {
 	generate_import_table();
 		
 	
-	# Print the template
-	print "Content-Type: text/html\n\n";
+	# Print the template #
+	######################
 	
+	# Print header
 	$template_title = $pphrase->param("TXT0000") . ": " . $pphrase->param("TXT0001");
-	
-	# Print Upload Template
+	print "Content-Type: text/html\n\n";
 	&lbheader;
+	
+		
+	# Print top menu template #
+	###########################
+	# print 
+	# '	<script>$(document).ready(function() {
+		# $(\'#menutop_import\').removeClass(\'ui-btn\').addClass(\'ui-btn-active\');
+		# });</script>';
+		open(F,"$installfolder/templates/plugins/$psubfolder/de/import_topmenu.html") || die "Missing template plugins/$psubfolder/de/top_menu.html";
+	  while (<F>) 
+	  {
+	    $_ =~ s/<!--\$(.*?)-->/${$1}/g;
+	    print $_;
+	  }
+	close(F);
+	
+	# Print Upload Template #
+	#########################
 	open(F,"$installfolder/templates/plugins/$psubfolder/multi/loxplan_uploadform.html") || die "Missing template plugins/$psubfolder/multi/loxplan_uploadform.html";
 	  while (<F>) 
 	  {
