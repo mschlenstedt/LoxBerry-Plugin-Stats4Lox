@@ -194,7 +194,10 @@ sub form {
 	# Print the template
 	print "Content-Type: text/html\n\n";
 	
-	# $template_title = $pphrase->param("TXT0000") . ": " . $pphrase->param("TXT0001");
+	$template_title = $pphrase->param("TXT0000") . ": " . $pphrase->param("TXT0001");
+	
+	# lbheader();
+	print rrdflot_alternative_header();
 	
 	# Print table Template
 	
@@ -259,6 +262,7 @@ sub generate_stat_overview
 		our $dbnr = $fields[0];
 		our $unique_name = $fields[3];
 		our $label = $fields[2];
+		
 		# tz  # timezone +1
 		print "<hr /><h3>$unique_name  ----- $label ----- DB $dbnr</h3>";
 		
@@ -269,6 +273,67 @@ sub generate_stat_overview
 		}
 	}
 }
+
+#####################################################
+# Page-Header-Sub
+#####################################################
+
+	sub lbheader 
+	{
+	  # Create Help page
+	  our $helplink = "http://www.loxwiki.eu:80/x/uYCm";
+	  open(F,"$installfolder/templates/plugins/$psubfolder/$lang/help.html") || die "Missing template plugins/$psubfolder/$lang/help.html";
+	    my @help = <F>;
+ 	    our $helptext;
+	    foreach (@help)
+	    {
+	      s/[\n\r]/ /g;
+	      $_ =~ s/<!--\$(.*?)-->/${$1}/g;
+	      $helptext = $helptext . $_;
+	    }
+	  close(F);
+	  open(F,"$installfolder/templates/system/$lang/header.html") || die "Missing template system/$lang/header.html";
+	    while (<F>) 
+	    {
+	      $_ =~ s/<!--\$(.*?)-->/${$1}/g;
+	      print $_;
+	    }
+	  close(F);
+	}
+
+sub rrdflot_alternative_header 
+{
+return '<html>
+	<head>
+		<title>LoxBerry: Statistics4Loxone</title>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8">
+		<link rel="stylesheet" href="/system/scripts/jquery/themes/main/loxberry.min.css">
+		<link rel="stylesheet" href="/system/scripts/jquery/themes/main/jquery.mobile.icons.min.css">
+		<link rel="stylesheet" href="/system/scripts/jquery/jquery.mobile.structure-1.4.5.min.css">
+		<link rel="stylesheet" href="/system/css/main.css">
+		<link rel="shortcut icon" href="/system/images/icons/favicon.ico" />
+		<link rel="icon" type="image/png" href="/system/images/favicon-32x32.png" sizes="32x32" />
+		<link rel="icon" type="image/png" href="/system/images/favicon-16x16.png" sizes="16x16" />
+		<!-- script src="/system/scripts/jquery/jquery-1.8.2.min.js"></script -->
+		<!--script src="/system/scripts/jquery/jquery.mobile-1.4.5.min.js"></script -->
+		<!-- script src="/system/scripts/form-validator/jquery.form-validator.min.js"></script -->
+		<!-- script src="/system/scripts/setup.js"></script -->
+		<!-- script>
+			// Disable JQUERY ♢OM Caching
+			$.mobile.page.prototype.options.domCache = false;
+			$(document).on("pagehide", "div[data-role=page]", function(event)
+			{
+				$(event.target).remove();
+			});
+			// Disable caching of AJAX responses
+			$.ajaxSetup ({ cache: false });
+		</script -->
+	</head>
+	<body>
+';
+
+}
+
 
 
 #####################################################
