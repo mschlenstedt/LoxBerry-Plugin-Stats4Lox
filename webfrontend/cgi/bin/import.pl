@@ -367,6 +367,13 @@ for (my $year=$lastupdate_year; $year <= $now->year; $year++) {
 		my $start_run = time();
 			
 		# Example URL http://192.168.0.77/stats/00ac8517-0961-11e1-99b9f25d750310ed.201207.xml
+		
+		# URI-Encode of UTF-8 strings
+		# http://lwp.interglacial.com/ch05_02.htm
+		# Possibly required for auth processing against Loxone
+		# use URI::Escape qw( uri_escape_utf8 );
+		# $esc = uri_escape_utf8( some string value )
+	
 		$statsurl = sprintf("http://$miniserveradmin:$miniserverpass\@$miniserverip:$miniserverport/stats/$loxuid.%04d%02d.xml", $year, $month);
 		my $statsurl_log = sprintf("http://$miniserveradmin:*****\@$miniserverip:$miniserverport/stats/$loxuid.%04d%02d.xml", $year, $month);
 		logger(4, "== DOWNLOAD == $month/$year with URL $statsurl_log ");
