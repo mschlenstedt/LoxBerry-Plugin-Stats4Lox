@@ -2,3 +2,5 @@
 rrdtool
 rrdcached
 libstring-escape-perl
+librrds-perl
+libproc-processtable-perl
