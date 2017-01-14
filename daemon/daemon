@@ -18,4 +18,13 @@ if [ ! -L /etc/default/rrdcached ]; then
   /usr/sbin/service rrdcached restart
 fi
 
+if [ ! -L REPLACEINSTALLFOLDER/log/plugins/REPLACEFOLDERNAME/stats4lox.log ]; then
+  timestamp=$(date +%s)
+  mv REPLACEINSTALLFOLDER/log/plugins/REPLACEFOLDERNAME/stats4lox.log REPLACEINSTALLFOLDER/log/plugins/REPLACEFOLDERNAME/stats4lox.log.$timestamp
+fi
+
+touch /run/shm/REPLACEFOLDERNAME/stats4lox.log 
+chown loxberry.loxberry /run/shm/REPLACEFOLDERNAME/stats4lox.log 
+ln -s /run/shm/REPLACEFOLDERNAME/stats4lox.log REPLACEINSTALLFOLDER/log/plugins/REPLACEFOLDERNAME/stats4lox.log
+
 exit 0
