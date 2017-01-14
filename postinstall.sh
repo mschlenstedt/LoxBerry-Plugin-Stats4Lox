@@ -54,6 +54,10 @@ if [ ! -d "$ARGV5/data/plugins/$ARGV3/databases" ]; then
   ln -s "$ARGV5/data/plugins/$ARGV3/databases $ARGV5/webfrontend/hmtl/plugins/$ARGV3/databases"
   fi
 
+if [ ! -f REPLACEINSTALLFOLDER/log/plugins/REPLACEFOLDERNAME/stats4lox.log ]; then
+  ln -s /run/shm/$ARGV3/stats4lox.log $ARGV5/log/plugins/$ARGV3/stats4lox.log
+fi
+
 echo "**********************************************************"
 echo "*     Please reboot your LoxBerry after installation     *"
 echo "* Bitte starte Deinen LoxBerry neu nach der Installation *"
