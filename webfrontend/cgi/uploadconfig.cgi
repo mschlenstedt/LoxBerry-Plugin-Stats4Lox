@@ -5,6 +5,8 @@ use File::HomeDir;
 use Cwd 'abs_path';
 use Config::Simple;
 
+print "Content-Type: text/plain\n\n";
+
 our $psubfolder = abs_path($0);
 $psubfolder =~ s/(.*)\/(.*)\/(.*)$/$2/g;
 my $home = File::HomeDir->my_home;
@@ -19,7 +21,7 @@ $uploadfile = param('loxplan');
 $uploadfile =~ s/.*[\/\\](.*)/$1/;
 
 # Path for upload file - clean before upload
-$loxconfig_path = "/tmp/loxplan.xml";
+our $loxconfig_path = "$installfolder/data/plugins/$psubfolder/upload.loxplan";
 if (-l $loxconfig_path) {
   print STDERR "ERROR: File is symbolic link. Will not overwrite due to security reasons!\n";
   exit (-1);
@@ -38,11 +40,9 @@ close UPLOADFILE;
 
 ############
 # For debugging only
-my $output = qx(/usr/bin/file $loxconfig_path);
-print "Content-Type: text/plain\n\n";
-print "Upload OK.\nOutput from /usr/bin/file is: $output";
-exit;
-#
+#my $output = qx(/usr/bin/file $loxconfig_path);
+#print "Upload OK.\nOutput from /usr/bin/file is: $output";
+#exit;
 ############
 
-print redirect(-url=>'/admin/plugins/$psubfolder/import.cgi');
+print redirect(-url=>"/admin/plugins/$psubfolder/import.cgi");
