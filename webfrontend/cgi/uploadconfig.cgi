@@ -5,7 +5,6 @@ use File::HomeDir;
 use Cwd 'abs_path';
 use Config::Simple;
 
-print "Content-Type: text/plain\n\n";
 
 our $psubfolder = abs_path($0);
 $psubfolder =~ s/(.*)\/(.*)\/(.*)$/$2/g;
@@ -40,6 +39,7 @@ close UPLOADFILE;
 
 ############
 # For debugging only
+#print "Content-Type: text/plain\n\n";
 #my $output = qx(/usr/bin/file $loxconfig_path);
 #print "Upload OK.\nOutput from /usr/bin/file is: $output";
 #exit;
