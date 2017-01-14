@@ -1,5 +1,5 @@
-									<form method="post" data-ajax="false" name="main_form" id="main_form" action="./addstat.cgi">
-										<input type="hidden" name="saveformdata" value="1">
+									<form method="post" data-ajax="false" name="main_form" id="main_form" action="./addstat.cgi?sid=<!--$sid-->&save=1">
+										<input type="hidden" name="save" value="1">
 											<div class="form-group">
 												<input id="rracount" type="hidden" name="rracount" value="<!--$rracount-->">
 												<table id="rrdtable" class="formtable" border="0" width="100%" cellpadding="10">
@@ -64,17 +64,17 @@
 																	Min:
 																	</td>
 																	<td width=40%>	
-																	<input id="min" name="min" type="text" data-validation="number" class="textfield" value="<!--$min-->" 
-																	data-validation-allowing="float,negative" data-validation-optional="true"
-																	data-validation-error-msg="* Bitte geben Sie einen gültigen Minimalwert ein.">
+																	<input id="min" name="min" type="text" data-validation="alphanumeric" class="textfield" value="<!--$min-->" 
+																	data-validation-allowing="+-." data-validation-optional="true"
+																	data-validation-error-msg="* Bitte geben Sie einen gültigen Minimalwert ein. Als Dezimaltrennzeichen muss ein Punkt verwendet werden.">
 																	</td>
 																	<td width="10%">
 																	Max:
 																	</td>
 																	<td width=40%>	
-																	<input id="max" name="max" type="text" data-validation="number" class="textfield" value="<!--$max-->" 
-																	data-validation-allowing="float,negative" data-validation-optional="true"
-																	data-validation-error-msg="* Bitte geben Sie einen gültigen Maximalwert ein.">
+																	<input id="max" name="max" type="text" data-validation="alphanumeric" class="textfield" value="<!--$max-->" 
+																	data-validation-allowing="+-." data-validation-optional="true"
+																	data-validation-error-msg="* Bitte geben Sie einen gültigen Maximalwert ein. Als Dezimaltrennzeichen muss ein Punkt verwendet werden.">
 																	</td>
 																</tr>
 															</table>	
@@ -161,8 +161,8 @@
 															<label id="labelstart">Start:</label>
 														</td>
 														<td width="50%">
-															<input id="start" name="start" type="text" data-validation="alphanumeric" data-validation-allowing="-+" data-validation-optional="true"
-															data-validation-error-msg="* Der Startwert darf nur aus alphanumerischen Zahlen und +/- bestehen." class="textfield" value="<!--$start-->">
+															<input id="start" name="start" type="text" data-validation="alphanumeric" data-validation-allowing="-+." data-validation-optional="true"
+															data-validation-error-msg="* Der Startwert darf nur aus alphanumerischen Zahlen bestehen." class="textfield" value="<!--$start-->">
 														</td>
 														<td width="5%" valign="middle">
 															&nbsp;
@@ -197,8 +197,8 @@
 															<label id="labelheartbeat">Heartbeat (Sek.):</label>
 														</td>
 														<td width="50%">
-															<input id="heartbeat" name="heartbeat" type="text" data-validation="alphanumeric" data-validation-optional="true"
-															data-validation-error-msg="* Der Heartbeat darf nur aus alphanumerischen Zahlen bestehen."	class="textfield" value="<!--$heartbeat-->">
+															<input id="heartbeat" name="heartbeat" type="text" data-validation="alphanumeric" data-validation-optional="true" data-validation-allowing="-+."
+															data-validation-error-msg="* Der Heartbeat darf nur aus alphanumerischen Zahlen bestehen. Als Dezimaltrennzeichen muss ein Punkt verwendet werden."	class="textfield" value="<!--$heartbeat-->">
 														</td>
 														<td width="5%" valign="middle">
 															&nbsp;
@@ -231,15 +231,15 @@
 																<td width="20%">
 																	<input id="xff1" name="xff1" type="text" data-validation="number" class="textfield" value="<!--$xff1-->" 
 																	data-validation-allowing="float" data-validation-optional="true"
-																	data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für XFF (1. RRA) ein.">
+																	data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für XFF (1. RRA) ein. Als Dezimaltrennzeichen muss ein Punkt verwendet werden.">
 																</td>
 																<td width="5%">
 																	<label id="labelstep1">Step:</label>
 																</td>
 																<td width="20%">
-																	<input id="step1" name="step1" type="text" data-validation="number" class="textfield" value="<!--$step1-->" 
-																	data-validation-optional="true"
-																	data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für Step (1. RRA) ein.">
+																	<input id="step1" name="step1" type="text" data-validation="alphanumeric" class="textfield" value="<!--$step1-->" 
+																	data-validation-optional="true" data-validation-allowing="-+."
+																	data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für Step (1. RRA) ein. Als Dezimaltrennzeichen muss ein Punkt verwendet werden.">
 																</td>
 																<td width="5%">
 																	<label id="labelrows1">Rows:</label>

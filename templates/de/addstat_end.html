@@ -25,8 +25,8 @@
 											<button type="submit" form="main_form" id="btnsubmit" data-role="button" data-inline="true" data-mini="true" data-icon="check">Speichern</button></td>
 											<td width="5"></td>
 											<td width="25%"><label id="labelsavedbsettings" for="savedbsettings">Als Vorgabe speichern</label><input onclick="disable()" 
-													type="checkbox" name="savedbsettings" id="savedbsettings" data-mini="true" value="1"></td>
-											<td width="25%"><input type="text" name="savedbsettingsname" id="savedbsettingsname" value="" placeholder="Vorgabenname"></td>
+													type="checkbox" name="savedbsettings" id="savedbsettings" data-mini="true" <!--$checkedsavedbsettings--> value="1"></td>
+											<td width="25%"><input type="text" name="savedbsettingsname" id="savedbsettingsname" value="<!--$savedbsettingsname-->" ></td>
 											</tr>
 											</table>
 											</center>
@@ -154,7 +154,7 @@
 											var cellRight = row.insertCell(0);
 											cellRight.innerHTML = '<label id="labelrra' + iteration + '">' + iteration + '. RRA:</label>'
 											var cellRight = row.insertCell(1);
-											cellRight.innerHTML = '<table border=0><tr><td width="5%">CF:</td><td width="20%"><select id="cf' + iteration + '" name="cf' + iteration + '" data-mini="true" data-native-menu="false"><option value="AVERAGE">AVERAGE</option><option value="MIN">MIN</option><option value="MAX">MAX</option><option value="LAST">LAST</option></select></td><td width="5%">XFF:</td><td width="20%"><input id="xff' + iteration + '" name="xff' + iteration + '" type="text" data-validation="number" class="textfield" value="" data-validation-allowing="float" data-validation-optional="true" data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für XFF (' + iteration + '. RRA) ein."></td><td width="5%">Step:</td><td width="20%"><input id="step' + iteration + '" name="step' + iteration + '" type="text" data-validation="number" class="textfield" value="" data-validation-optional="true" data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für Step (' + iteration + '. RRA) ein."></td><td width="5%">Rows:</td><td width="20%"><input id="rows' + iteration + '" name="rows' + iteration + '" type="text" data-validation="number" class="textfield" value="" data-validation-optional="true" data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für Rows (' + iteration + '. RRA) ein."></td></tr></table>'
+											cellRight.innerHTML = '<table border=0><tr><td width="5%">CF:</td><td width="20%"><select id="cf' + iteration + '" name="cf' + iteration + '" data-mini="true" data-native-menu="false"><option value="AVERAGE">AVERAGE</option><option value="MIN">MIN</option><option value="MAX">MAX</option><option value="LAST">LAST</option></select></td><td width="5%">XFF:</td><td width="20%"><input id="xff' + iteration + '" name="xff' + iteration + '" type="text" data-validation="number" class="textfield" value="" data-validation-allowing="float" data-validation-optional="true" data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für XFF (' + iteration + '. RRA) ein. Als Dezimaltrennzeichen muss ein Punkt verwendet werden."></td><td width="5%">Step:</td><td width="20%"><input id="step' + iteration + '" name="step' + iteration + '" type="text" data-validation="alphanumeric" class="textfield" value="" data-validation-optional="true" data-validation-allowing="-+." data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für Step (' + iteration + '. RRA) ein. Als Dezimaltrennzeichen muss ein Punkt verwendet werden."></td><td width="5%">Rows:</td><td width="20%"><input id="rows' + iteration + '" name="rows' + iteration + '" type="text" data-validation="number" class="textfield" value="" data-validation-optional="true" data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für Rows (' + iteration + '. RRA) ein."></td></tr></table>'
 											var cellRight = row.insertCell(2);
 											cellRight.innerHTML = ''
 											var cellRight = row.insertCell(3);
@@ -209,7 +209,7 @@
 
 										// Load settings
 										function LoadSettings() {
-										url = './addstat.cgi?load=1&settings=' + $('#settings').val();
+										url = './addstat.cgi?sid=<!--$sid-->&load=1&settings=' + $('#settings').val();
 										document.location.href = url;
 										}
        		</script>
