@@ -29,7 +29,8 @@ use Cwd 'abs_path';
 use URI::Escape;
 use XML::Simple qw(:strict);
 use CGI::Session;
-use warnings;
+use Getopt::Long;
+#use warnings;
 #use strict;
 #no strict "refs"; # we need it for template system
 our $namef;
@@ -74,69 +75,110 @@ foreach (split(/&/,$ENV{'QUERY_STRING'}))
   $query{$namef} = $value;
 }
 
+# Get command line options - this also sets the variables to it's default value "" or 0!
+our $load = 0;
+our $save = 0;
+our $script = 0;
+our $settings = "";
+our $sid = "";
+our $lang = "de";
+our $rracount = 1;
+our $loxonename = "";
+our $miniserver = 1;
+our $description = "";
+our $min = "";
+our $max = "";
+our $dbsettings = "default";
+our $step = "300";
+our $start = "";
+our $dsname = "";
+our $heartbeat = "";
+our $savedbsettings = 0;
+our $savedbsettingsname = "";
+our $commandline = 0;
+our $place = "";
+our $placenew = "";
+our $category = "";
+our $categorynew = "";
+our $uid = "";
+our $unit = "";
+our $block = "";
+
+# Test for commandline options
+GetOptions (	"script" 		=> \$script, # Use this to figure out if we were called from command line
+		"save"			=> \$query{'save'},
+		"load"			=> \$query{'load'},
+		"settings=i"		=> \$query{'settings'},		
+		"sid=s"			=> \$query{'sid'},		
+		"lang=s"		=> \$query{'lang'},		
+		"rracount=i"		=> \$query{'rracount'},		
+		"loxonename=s"		=> \$query{'loxonename'},		
+		"miniserver=i"		=> \$query{'miniserver'},		
+		"description=s"		=> \$query{'description'},		
+		"min=s"			=> \$query{'min'},		
+		"max=s"			=> \$query{'max'},		
+		"dbsettings=s"		=> \$query{'dbsettings'},		
+		"step=i"		=> \$query{'step'},		
+		"start=s"		=> \$query{'start'},		
+		"dsname=s"		=> \$query{'dsname'},		
+		"heartbeat=s"		=> \$query{'heartbeat'},		
+		"savedbsettings"	=> \$query{'savedbsettings'},		
+		"savedbsettingsname=s"	=> \$query{'savedbsettingsname'},
+		"place=s"		=> \$query{'place'},
+		"category=s"		=> \$query{'category'},
+		"uid=s"			=> \$query{'uid'},
+		"unit=s"		=> \$query{'unit'},
+		"block=s"		=> \$query{'block'},
+);
+
+# Check if we were called from command line.
+if ( $script ) {
+	$query{'script'} = $script;
+	our $commandline = 1;
+}
+
 # Set parameters coming in - get over post - First group needed if we should read settings from db
 if ( !$query{'script'} ) { 
 	if ( param('script') ) { 
-		our $script = quotemeta(param('script')); 
-	} else { 
-		our $script = 0;
+		$script = quotemeta(param('script')); 
 	} 
 } else { 
-	our $script = quotemeta($query{'script'}); 
+	$script = quotemeta($query{'script'}); 
 }
 if ( !$query{'save'} ) { 
 	if ( param('save') ) { 
-		our $save = quotemeta(param('save')); 
-	} else { 
-		our $save = 0;
+		$save = quotemeta(param('save')); 
 	} 
 } else { 
-	our $save = quotemeta($query{'save'}); 
+	$save = quotemeta($query{'save'}); 
 }
 if ( !$query{'load'} ) { 
 	if ( param('load') ) { 
-		our $load = quotemeta(param('load')); 
-	} else { 
-		our $load = 0;
+		$load = quotemeta(param('load')); 
 	} 
 } else { 
-	our $load = quotemeta($query{'load'}); 
+	$load = quotemeta($query{'load'}); 
 }
 if ( !$query{'settings'} ) { 
 	if ( param('settings') ) {
-		our $settings = quotemeta(param('settings'));
-	} else {
-		our $settings = "";
+		$settings = quotemeta(param('settings'));
 	}
 } else {
-	our $settings = quotemeta($query{'settings'});
+	$settings = quotemeta($query{'settings'});
 }
 if ( !$query{'sid'} ) { 
 	if ( param('sid') ) {
-		our $sid = quotemeta(param('sid'));
-	} else {
-		our $sid = "";
+		$sid = quotemeta(param('sid'));
 	}
 } else {
-	our $sid = quotemeta($query{'sid'});
+	$sid = quotemeta($query{'sid'});
 }
 if ( !$query{'lang'} ) {
 	if ( param('lang') ) {
 		$lang = quotemeta(param('lang'));
-	} else {
-		$lang = "de";
 	}
 } else {
 	$lang = quotemeta($query{'lang'}); 
-}
-if ( !$query{'do'} ) { 
-	if ( param('do') ) {
-		our $do = quotemeta(param('do'));
-	} else {
-		our $do = "form";
-	}
-} else {
-	our $do = quotemeta($query{'do'});
 }
 $script =~ tr/0-1//cd;
 $script = substr($script,0,1);
@@ -211,12 +253,10 @@ if ( ($load || $script) && $settings > 1 ) {
 # Set parameters coming in - get over post - Second group
 if ( !$query{'rracount'} ) { 
 	if ( param('rracount') ) {
-		our $rracount = quotemeta(param('rracount'));
+		$rracount = quotemeta(param('rracount'));
 	} else {
 		if ( $session->param('rracount') && !$load ) {
-			our $rracount = quotemeta($session->param('rracount'));
-		} else {
-			our $rracount = 1;
+			$rracount = quotemeta($session->param('rracount'));
 		}
 	}
 } else {
@@ -224,81 +264,69 @@ if ( !$query{'rracount'} ) {
 }
 if ( !$query{'loxonename'} ) { 
 	if ( param('loxonename') ) {
-		our $loxonename = quotemeta(param('loxonename'));
+		$loxonename = quotemeta(param('loxonename'));
 	} else {
 		if ( $session->param('loxonename') && !$load ) {
-			our $loxonename = $session->param('loxonename');
-		} else {
-			our $loxonename = "";
+			$loxonename = $session->param('loxonename');
 		}
 	}
 } else {
-	our $loxonename = quotemeta($query{'loxonename'});
+	$loxonename = quotemeta($query{'loxonename'});
 }
 if ( !$query{'miniserver'} ) { 
 	if ( param('miniserver') ) {
-		our $miniserver = quotemeta(param('miniserver'));
+		$miniserver = quotemeta(param('miniserver'));
 	} else {
 		if ( $session->param('miniserver') && !$load ) {
-			our $miniserver = quotemeta($session->param('miniserver'));
-		} else {
-			our $miniserver = 1;
+			$miniserver = quotemeta($session->param('miniserver'));
 		}
 	}
 } else {
-	our $miniserver = quotemeta($query{'miniserver'});
+	$miniserver = quotemeta($query{'miniserver'});
 }
 if ( !$query{'description'} ) { 
 	if ( param('description') ) {
-		our $description = quotemeta(param('description'));
+		$description = quotemeta(param('description'));
 	} else {
 		if ( $session->param('description') && !$load ) {
-			our $description = $session->param('description');
-		} else {
-			our $description = "";
+			$description = $session->param('description');
 		}
 	}
 } else {
-	our $description = quotemeta($query{'description'});
+	$description = quotemeta($query{'description'});
 }
 if ( !$query{'min'} && $query{'min'} ne 0 ) { 
 	if ( param('min') || param('min') eq 0 ) {
-		our $min = quotemeta(param('min'));
+		$min = quotemeta(param('min'));
 	} else {
 		if ( $session->param('min') && !$load ) {
-			our $min = $session->param('min');
-		} else {
-			our $min = "";
+			$min = $session->param('min');
 		}
 	}
 } else {
-	our $min = quotemeta($query{'min'});
+	$min = quotemeta($query{'min'});
 }
 if ( !$query{'max'} && $query{'max'} ne 0 ) { 
 	if ( param('max') || param('max') eq 0 ) {
-		our $max = quotemeta(param('max'));
+		$max = quotemeta(param('max'));
 	} else {
 		if ( $session->param('max') && !$load ) {
-			our $max = $session->param('max');
-		} else {
-			our $max = "";
+			$max = $session->param('max');
 		}
 	}
 } else {
-	our $max = quotemeta($query{'max'});
+	$max = quotemeta($query{'max'});
 }
 if ( !$query{'dbsettings'} ) { 
 	if ( param('dbsettings') ) {
-		our $dbsettings = quotemeta(param('dbsettings'));
+		$dbsettings = quotemeta(param('dbsettings'));
 	} else {
 		if ( $session->param('dbsettings') && !$load ) {
-			our $dbsettings = quotemeta($session->param('dbsettings'));
-		} else {
-			our $dbsettings = "default";
+			$dbsettings = quotemeta($session->param('dbsettings'));
 		}
 	}
 } else {
-	our $dbsettings = quotemeta($query{'dbsettings'});
+	$dbsettings = quotemeta($query{'dbsettings'});
 }
 if ($dbsettings eq "custom") {
 	our $checkeddbsettings2 = "checked=checked";
@@ -307,16 +335,14 @@ if ($dbsettings eq "custom") {
 }
 if ( !$query{'step'} ) { 
 	if ( param('step') ) {
-		our $step = quotemeta(param('step'));
+		$step = quotemeta(param('step'));
 	} else {
 		if ( $session->param('step') && !$load ) {
-			our $step = quotemeta($session->param('step'));
-		} else {
-			our $step = "300";
+			$step = quotemeta($session->param('step'));
 		}
 	}
 } else {
-	our $step = quotemeta($query{'step'});
+	$step = quotemeta($query{'step'});
 }
 if ($step eq "60") {
 	our $selectedstep1 = "selected=selected";
@@ -339,29 +365,25 @@ if ($step eq "60") {
 }
 if ( !$query{'start'} ) { 
 	if ( param('start') ) {
-		our $start = quotemeta(param('start'));
+		$start = quotemeta(param('start'));
 	} else {
 		if ( $session->param('start') && !$load ) {
-			our $start = $session->param('start');
-		} else {
-			our $start = "";
+			$start = $session->param('start');
 		}
 	}
 } else {
-	our $start = quotemeta($query{'start'});
+	$start = quotemeta($query{'start'});
 }
 if ( !$query{'dsname'} ) { 
 	if ( param('dsname') ) {
-		our $dsname = quotemeta(param('dsname'));
+		$dsname = quotemeta(param('dsname'));
 	} else {
 		if ( $session->param('dsname') && !$load ) {
-			our $dsname = quotemeta($session->param('dsname'));
-		} else {
-			our $dsname = "";
+			$dsname = quotemeta($session->param('dsname'));
 		}
 	}
 } else {
-	our $dsname = quotemeta($query{'dsname'});
+	$dsname = quotemeta($query{'dsname'});
 }
 if ($dsname eq "GAUGE") {
 	our $selecteddsname1 = "selected=selected";
@@ -380,16 +402,14 @@ if ($dsname eq "GAUGE") {
 }
 if ( !$query{'heartbeat'} ) { 
 	if ( param('heartbeat') ) {
-		our $heartbeat = quotemeta(param('heartbeat'));
+		$heartbeat = quotemeta(param('heartbeat'));
 	} else {
 		if ( $session->param('heartbeat') && !$load ) {
-			our $heartbeat = $session->param('heartbeat');
-		} else {
-			our $heartbeat = "";
+			$heartbeat = $session->param('heartbeat');
 		}
 	}
 } else {
-	our $heartbeat = quotemeta($query{'heartbeat'});
+	$heartbeat = quotemeta($query{'heartbeat'});
 }
 $i = 1;
 while ($i <= $rracount) {
@@ -460,34 +480,108 @@ while ($i <= $rracount) {
 }
 if ( !$query{'savedbsettings'} ) {
         if ( param('savedbsettings') ) {
-                our $savedbsettings = quotemeta(param('savedbsettings'));
+		$savedbsettings = quotemeta(param('savedbsettings'));
         } else {
 		if ( $session->param('savedbsettings') && !$load ) {
-			our $savedbsettings = quotemeta($session->param('savedbsettings'));
-		} else {
-               		our $savedbsettings = 0;
+			$savedbsettings = quotemeta($session->param('savedbsettings'));
 		}
         }
 } else {
-        our $savedbsettings = quotemeta($query{'savedbsettings'});
+	$savedbsettings = quotemeta($query{'savedbsettings'});
 }
 if ( $savedbsettings ) {
-	our $checkedsavedbsettings = "checked=checked";
+	$checkedsavedbsettings = "checked=checked";
 }
 if ( !$query{'savedbsettingsname'} ) {
         if ( param('savedbsettingsname') ) {
-                our $savedbsettingsname = quotemeta(param('savedbsettingsname'));
+		$savedbsettingsname = quotemeta(param('savedbsettingsname'));
         } else {
 		if ( $session->param('savedbsettingsname') && !$load ) {
-			our $savedbsettingsname = $session->param('savedbsettingsname');
-		} else {
-                	our $savedbsettingsname = "";
+			$savedbsettingsname = $session->param('savedbsettingsname');
 		}
         }
 } else {
-        our $savedbsettingsname = quotemeta($query{'savedbsettingsname'});
+	$savedbsettingsname = quotemeta($query{'savedbsettingsname'});
+}
+if ( !$query{'place'} ) { 
+	if ( param('place') ) {
+		$place = quotemeta(param('place'));
+	} else {
+		if ( $session->param('place') && !$load ) {
+			$place = $session->param('place');
+		}
+	}
+} else {
+	$place = quotemeta($query{'place'});
+}
+if ( !$query{'placenew'} ) { 
+	if ( param('placenew') ) {
+		$placenew = quotemeta(param('placenew'));
+	} else {
+		if ( $session->param('placenew') && !$load ) {
+			$placenew = $session->param('placenew');
+		}
+	}
+} else {
+	$placenew = quotemeta($query{'placenew'});
+}
+if ( !$query{'category'} ) { 
+	if ( param('ctegory') ) {
+		$category = quotemeta(param('category'));
+	} else {
+		if ( $session->param('category') && !$load ) {
+			$category = $session->param('category');
+		}
+	}
+} else {
+	$category = quotemeta($query{'category'});
+}
+if ( !$query{'categorynew'} ) { 
+	if ( param('ctegory') ) {
+		$categorynew = quotemeta(param('categorynew'));
+	} else {
+		if ( $session->param('categorynew') && !$load ) {
+			$categorynew = $session->param('categorynew');
+		}
+	}
+} else {
+	$categorynew = quotemeta($query{'categorynew'});
+}
+if ( !$query{'uid'} ) { 
+	if ( param('uid') ) {
+		$uid = quotemeta(param('uid'));
+	} else {
+		if ( $session->param('uid') && !$load ) {
+			$uid = $session->param('uid');
+		}
+	}
+} else {
+	$uid = quotemeta($query{'uid'});
+}
+if ( !$query{'unit'} ) { 
+	if ( param('unit') ) {
+		$unit = quotemeta(param('unit'));
+	} else {
+		if ( $session->param('unit') && !$load ) {
+			$unit = $session->param('unit');
+		}
+	}
+} else {
+	$unit = quotemeta($query{'unit'});
+}
+if ( !$query{'block'} ) { 
+	if ( param('block') ) {
+		$block = quotemeta(param('block'));
+	} else {
+		if ( $session->param('block') && !$load ) {
+			$block = $session->param('block');
+		}
+	}
+} else {
+	$block = quotemeta($query{'block'});
 }
 
+# Filter
 $savedbsettings =~ tr/0-1//cd;
 $savedbsettings = substr($savedbsettings,0,1);
 
@@ -638,28 +732,8 @@ sub save
 	# Take me back here in case of an error
 	our $backurl = "./addstat.cgi?sid=$sid";
 
-#	$session->param("miniserver", $miniserver);
-#	$session->param("loxonename", $loxonename);
-#	$session->param("description", $description);
-#	$session->param("min", $min);
-#	$session->param("max", $max);
-#	$session->param("step", $step);
-#	$session->param("dbsettings", $dbsettings);
-#	$session->param("rracount", $rracount);
-#	$session->param("start", $start);
-#	$session->param("dsname", $dsname);
-#	$session->param("heartbeat", $heartbeat);
-#	if ($dbsettings eq "custom") {
-#		$i = 1;
-#		while ($i <= $rracount) {
-#			$session->param("cf$i", ${cf.$i});
-#			$session->param("xxf$i", ${xxf.$i});
-#			$session->param("step$i", ${step.$i});
-#			$session->param("rows$i", ${rows.$i});
-#			$i++;
-#		}	
-#	}
-$session->save_param($cgi);
+	# Save CGI session
+	$session->save_param($cgi);
 
 	# Check values
 	if ( !$loxonename ) {
@@ -738,6 +812,11 @@ $session->save_param($cgi);
 			next;	
 		} else {
 			$found = 1;
+			# Filter units
+			if ( !$unit ) {
+				$unit = $xml->{value};
+				$unit =~ s/^([\d\.\ ]+)(.*)/$2/g;
+			}
 		}
 		$i++;
 	}
@@ -847,7 +926,12 @@ $session->save_param($cgi);
 		binmode F, ':encoding(UTF-8)';
 		$description = Encode::decode( "UTF-8", unquotemeta($description) );
 		$loxonename = Encode::decode( "UTF-8", unquotemeta($loxonename) );
-		print F "$dbfilename|$step|$description|$loxonename|$miniserver|$min|$max\n";
+		$place = unquotemeta($place);
+		$category = unquotemeta($category);
+		$uid = unquotemeta($uid);
+		$unit = unquotemeta($unit);
+		$block = unquotemeta($block);
+		print F "$dbfilename|$step|$description|$loxonename|$miniserver|$min|$max|$place|$category|$uid|$unit|$block\n";
 	close(F);
 
 	# Create status file
@@ -907,8 +991,10 @@ $session->save_param($cgi);
 		close(F);
 		&footer;
 	} else {
-		print "Content-Type: text/plain\n\n"; 
-		print "+++OK+++".$pphrase->param("TXT0002")."+++$dbfilename";
+		if ( !$commandline ) {
+			print "Content-Type: text/plain\n\n"; 
+		}
+		print "+++OK+++".$pphrase->param("TXT0002")."+++$dbfilename\n";
 	}
 	exit;
 		
@@ -933,8 +1019,10 @@ sub error
 		close(F);
 		&footer;
 	} else {
-		print "Content-Type: text/plain\n\n"; 
-		print "+++ERROR+++".$error;
+		if ( !$commandline ) {
+			print "Content-Type: text/plain\n\n"; 
+		}
+		print "+++ERROR+++".$error."\n";
 	}
 	exit;
 }
