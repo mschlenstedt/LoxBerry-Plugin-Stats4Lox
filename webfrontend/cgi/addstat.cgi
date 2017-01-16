@@ -525,8 +525,11 @@ if ( !$query{'placenew'} ) {
 } else {
 	$placenew = quotemeta($query{'placenew'});
 }
+if ( $placenew ) {
+	$place = $placenew;
+}
 if ( !$query{'category'} ) { 
-	if ( param('ctegory') ) {
+	if ( param('category') ) {
 		$category = quotemeta(param('category'));
 	} else {
 		if ( $session->param('category') && !$load ) {
@@ -537,7 +540,7 @@ if ( !$query{'category'} ) {
 	$category = quotemeta($query{'category'});
 }
 if ( !$query{'categorynew'} ) { 
-	if ( param('ctegory') ) {
+	if ( param('categorynew') ) {
 		$categorynew = quotemeta(param('categorynew'));
 	} else {
 		if ( $session->param('categorynew') && !$load ) {
@@ -546,6 +549,9 @@ if ( !$query{'categorynew'} ) {
 	}
 } else {
 	$categorynew = quotemeta($query{'categorynew'});
+}
+if ( $categorynew ) {
+	$category = $categorynew;
 }
 if ( !$query{'uid'} ) { 
 	if ( param('uid') ) {
@@ -579,6 +585,76 @@ if ( !$query{'block'} ) {
 	}
 } else {
 	$block = quotemeta($query{'block'});
+}
+
+# Places and category list - sort in alphabetical order
+open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat") || die "Cannot open database for RRD-databases.";
+flock(F,2);
+@lines = <F>;
+close(F);
+
+# Places
+our @places;
+foreach (@lines){
+	s/[\n\r]//g;
+	# Skip comments
+	my $commentchar = substr($_,0,1);
+	if ($commentchar eq "#" || $_ eq "") {
+		next;
+	}
+	@fields = split(/\|/);
+	our $placeselectmenu;
+	$found = 0;
+	foreach (@places) {
+		if ($_ eq @fields[7]) {
+			$found = 1;
+		}
+	}
+	if (!$found) {
+		push (@places,"@fields[7]");
+	}
+}
+
+# Sorting and creating select list
+my @placessorted = sort { lc($a) cmp lc($b) } @places;
+foreach (@placessorted){
+	if ( $_ eq $place ) {
+		$placeselectmenu .= "<option value='$_' selected=selected>$_</option>";
+	} else {
+		$placeselectmenu .= "<option value='$_'>$_</option>";
+	}
+}
+
+# Categories
+our @categories;
+foreach (@lines){
+	s/[\n\r]//g;
+	# Skip comments
+	my $commentchar = substr($_,0,1);
+	if ($commentchar eq "#" || $_ eq "") {
+		next;
+	}
+	@fields = split(/\|/);
+	our $categoryselectmenu;
+	$found = 0;
+	foreach (@categories) {
+		if ($_ eq @fields[8]) {
+			$found = 1;
+		}
+	}
+	if (!$found) {
+		push (@categories,"@fields[8]");
+	}
+}
+
+# Sorting and creating select list
+my @categoriessorted = sort { lc($a) cmp lc($b) } @categories;
+foreach (@categoriessorted){
+	if ( $_ eq $category ) {
+		$categoryselectmenu .= "<option value='$_' selected=selected>$_</option>";
+	} else {
+		$categoryselectmenu .= "<option value='$_'>$_</option>";
+	}
 }
 
 # Filter
@@ -926,8 +1002,8 @@ sub save
 		binmode F, ':encoding(UTF-8)';
 		$description = Encode::decode( "UTF-8", unquotemeta($description) );
 		$loxonename = Encode::decode( "UTF-8", unquotemeta($loxonename) );
-		$place = unquotemeta($place);
-		$category = unquotemeta($category);
+		$place = Encode::decode( "UTF-8", unquotemeta($place) );
+		$category = Encode::decode( "UTF-8", unquotemeta($category) );
 		$uid = unquotemeta($uid);
 		$unit = unquotemeta($unit);
 		$block = unquotemeta($block);
