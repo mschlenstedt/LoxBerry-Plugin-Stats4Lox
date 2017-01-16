@@ -50,10 +50,10 @@ ARGV5=$5 # Fifth argument is Base folder of LoxBerry
 
 if [ ! -d "$ARGV5/data/plugins/$ARGV3/databases" ]; then
   mkdir "$ARGV5/data/plugins/$ARGV3/databases"
-  # Link databases to HTML directory to have access from Client JavaScript
-  ln -s "$ARGV5/data/plugins/$ARGV3/databases $ARGV5/webfrontend/hmtl/plugins/$ARGV3/databases"
-  fi
-
+fi
+# Link databases to HTML directory to have access from Client JavaScript
+ln -s "$ARGV5/data/plugins/$ARGV3/databases $ARGV5/webfrontend/hmtl/plugins/$ARGV3/databases"
+  
 if [ ! -f REPLACEINSTALLFOLDER/log/plugins/REPLACEFOLDERNAME/stats4lox.log ]; then
   ln -s /run/shm/$ARGV3/stats4lox.log $ARGV5/log/plugins/$ARGV3/stats4lox.log
 fi
