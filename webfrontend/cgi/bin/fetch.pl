@@ -142,7 +142,7 @@ foreach (@data){
 	&log;
 
 	$loxonenameurlenc = uri_escape( unquotemeta(@fields[3]) );
-	$url = "http://$miniserveradmin:$miniserverpass\@$miniserverip\:$miniserverport/dev/sps/io/$loxonenameurlenc/astate";
+	$url = "http://$miniserveradmin:$miniserverpass\@$miniserverip\:$miniserverport/dev/sps/io/$loxonenameurlenc/all";
 
 	$ua = LWP::UserAgent->new;
 	$ua->timeout(1);
