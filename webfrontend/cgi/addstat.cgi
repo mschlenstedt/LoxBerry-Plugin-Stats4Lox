@@ -28,7 +28,9 @@ use File::HomeDir;
 use Cwd 'abs_path';
 use URI::Escape;
 use XML::Simple qw(:strict);
-use warnings;
+use CGI::Session;
+use Getopt::Long;
+#use warnings;
 #use strict;
 #no strict "refs"; # we need it for template system
 our $namef;
@@ -73,38 +75,134 @@ foreach (split(/&/,$ENV{'QUERY_STRING'}))
   $query{$namef} = $value;
 }
 
+# Get command line options - this also sets the variables to it's default value "" or 0!
+our $load = 0;
+our $save = 0;
+our $script = 0;
+our $settings = "";
+our $sid = "";
+our $lang = "de";
+our $rracount = 1;
+our $loxonename = "";
+our $miniserver = 1;
+our $description = "";
+our $min = "";
+our $max = "";
+our $dbsettings = "default";
+our $step = "300";
+our $start = "";
+our $dsname = "";
+our $heartbeat = "";
+our $savedbsettings = 0;
+our $savedbsettingsname = "";
+our $commandline = 0;
+our $place = "";
+our $placenew = "";
+our $category = "";
+our $categorynew = "";
+our $uid = "";
+our $unit = "";
+our $block = "";
+
+# Test for commandline options
+GetOptions (	"script" 		=> \$script, # Use this to figure out if we were called from command line
+		"save"			=> \$query{'save'},
+		"load"			=> \$query{'load'},
+		"settings=i"		=> \$query{'settings'},		
+		"sid=s"			=> \$query{'sid'},		
+		"lang=s"		=> \$query{'lang'},		
+		"rracount=i"		=> \$query{'rracount'},		
+		"loxonename=s"		=> \$query{'loxonename'},		
+		"miniserver=i"		=> \$query{'miniserver'},		
+		"description=s"		=> \$query{'description'},		
+		"min=s"			=> \$query{'min'},		
+		"max=s"			=> \$query{'max'},		
+		"dbsettings=s"		=> \$query{'dbsettings'},		
+		"step=i"		=> \$query{'step'},		
+		"start=s"		=> \$query{'start'},		
+		"dsname=s"		=> \$query{'dsname'},		
+		"heartbeat=s"		=> \$query{'heartbeat'},		
+		"savedbsettings"	=> \$query{'savedbsettings'},		
+		"savedbsettingsname=s"	=> \$query{'savedbsettingsname'},
+		"place=s"		=> \$query{'place'},
+		"category=s"		=> \$query{'category'},
+		"uid=s"			=> \$query{'uid'},
+		"unit=s"		=> \$query{'unit'},
+		"block=s"		=> \$query{'block'},
+);
+
+# Check if we were called from command line.
+if ( $script ) {
+	$query{'script'} = $script;
+	our $commandline = 1;
+}
+
 # Set parameters coming in - get over post - First group needed if we should read settings from db
 if ( !$query{'script'} ) { 
 	if ( param('script') ) { 
-		our $script = quotemeta(param('script')); 
-	} else { 
-		our $script = 0;
+		$script = quotemeta(param('script')); 
 	} 
 } else { 
-	our $script = quotemeta($query{'script'}); 
+	$script = quotemeta($query{'script'}); 
+}
+if ( !$query{'save'} ) { 
+	if ( param('save') ) { 
+		$save = quotemeta(param('save')); 
+	} 
+} else { 
+	$save = quotemeta($query{'save'}); 
 }
 if ( !$query{'load'} ) { 
 	if ( param('load') ) { 
-		our $load = quotemeta(param('load')); 
-	} else { 
-		our $load = 0;
+		$load = quotemeta(param('load')); 
 	} 
 } else { 
-	our $load = quotemeta($query{'load'}); 
+	$load = quotemeta($query{'load'}); 
 }
 if ( !$query{'settings'} ) { 
 	if ( param('settings') ) {
-		our $settings = quotemeta(param('settings'));
-	} else {
-		our $settings = "";
+		$settings = quotemeta(param('settings'));
 	}
 } else {
-	our $settings = quotemeta($query{'settings'});
+	$settings = quotemeta($query{'settings'});
+}
+if ( !$query{'sid'} ) { 
+	if ( param('sid') ) {
+		$sid = quotemeta(param('sid'));
+	}
+} else {
+	$sid = quotemeta($query{'sid'});
+}
+if ( !$query{'lang'} ) {
+	if ( param('lang') ) {
+		$lang = quotemeta(param('lang'));
+	}
+} else {
+	$lang = quotemeta($query{'lang'}); 
 }
 $script =~ tr/0-1//cd;
 $script = substr($script,0,1);
 $load =~ tr/0-1//cd;
 $load = substr($load,0,1);
+$save =~ tr/0-1//cd;
+$save = substr($save,0,1);
+
+# Init Language
+# Clean up lang variable
+$lang =~ tr/a-z//cd;
+$lang = substr($lang,0,2);
+
+# Create new Session if none exists, else use existing one
+if (!$sid) {
+  $session = new CGI::Session("driver:File", undef, {Directory=>"$installfolder/webfrontend/sessioncache"});
+  $sid = $session->id();
+} else {
+  $session = new CGI::Session("driver:File", $sid, {Directory=>"$installfolder/webfrontend/sessioncache"});
+  $sid = $session->id();
+}
+
+# Sessions are valid for 24 hour
+$session->expire('+24h');    # expire after 24 hour
 
 # Load settings from database if needed
 if ( ($load || $script) && $settings > 1 ) {
@@ -153,95 +251,82 @@ if ( ($load || $script) && $settings > 1 ) {
 }
 
 # Set parameters coming in - get over post - Second group
-if ( !$query{'saveformdata'} ) { 
-	if ( param('saveformdata') ) { 
-		our $saveformdata = quotemeta(param('saveformdata')); 
-	} else { 
-		our $saveformdata = 0;
-	} 
-} else { 
-	our $saveformdata = quotemeta($query{'saveformdata'}); 
-}
-if ( !$query{'lang'} ) {
-	if ( param('lang') ) {
-		$lang = quotemeta(param('lang'));
-	} else {
-		$lang = "de";
-	}
-} else {
-	$lang = quotemeta($query{'lang'}); 
-}
-if ( !$query{'do'} ) { 
-	if ( param('do') ) {
-		our $do = quotemeta(param('do'));
-	} else {
-		our $do = "form";
-	}
-} else {
-	our $do = quotemeta($query{'do'});
-}
 if ( !$query{'rracount'} ) { 
 	if ( param('rracount') ) {
-		our $rracount = quotemeta(param('rracount'));
+		$rracount = quotemeta(param('rracount'));
 	} else {
-		our $rracount = 1;
+		if ( $session->param('rracount') && !$load ) {
+			$rracount = quotemeta($session->param('rracount'));
+		}
 	}
 } else {
 	our $rracount = quotemeta($query{'rracount'});
 }
 if ( !$query{'loxonename'} ) { 
 	if ( param('loxonename') ) {
-		our $loxonename = quotemeta(param('loxonename'));
+		$loxonename = quotemeta(param('loxonename'));
 	} else {
-		our $loxonename = "";
+		if ( $session->param('loxonename') && !$load ) {
+			$loxonename = $session->param('loxonename');
+		}
 	}
 } else {
-	our $loxonename = quotemeta($query{'loxonename'});
+	$loxonename = quotemeta($query{'loxonename'});
 }
 if ( !$query{'miniserver'} ) { 
 	if ( param('miniserver') ) {
-		our $miniserver = quotemeta(param('miniserver'));
+		$miniserver = quotemeta(param('miniserver'));
 	} else {
-		our $miniserver = 1;
+		if ( $session->param('miniserver') && !$load ) {
+			$miniserver = quotemeta($session->param('miniserver'));
+		}
 	}
 } else {
-	our $miniserver = quotemeta($query{'miniserver'});
+	$miniserver = quotemeta($query{'miniserver'});
 }
 if ( !$query{'description'} ) { 
 	if ( param('description') ) {
-		our $description = quotemeta(param('description'));
+		$description = quotemeta(param('description'));
 	} else {
-		our $description = "";
+		if ( $session->param('description') && !$load ) {
+			$description = $session->param('description');
+		}
 	}
 } else {
-	our $description = quotemeta($query{'description'});
+	$description = quotemeta($query{'description'});
 }
 if ( !$query{'min'} && $query{'min'} ne 0 ) { 
 	if ( param('min') || param('min') eq 0 ) {
-		our $min = quotemeta(param('min'));
+		$min = quotemeta(param('min'));
 	} else {
-		our $min = "";
+		if ( $session->param('min') && !$load ) {
+			$min = $session->param('min');
+		}
 	}
 } else {
-	our $min = quotemeta($query{'min'});
+	$min = quotemeta($query{'min'});
 }
 if ( !$query{'max'} && $query{'max'} ne 0 ) { 
 	if ( param('max') || param('max') eq 0 ) {
-		our $max = quotemeta(param('max'));
+		$max = quotemeta(param('max'));
 	} else {
-		our $max = "";
+		if ( $session->param('max') && !$load ) {
+			$max = $session->param('max');
+		}
 	}
 } else {
-	our $max = quotemeta($query{'max'});
+	$max = quotemeta($query{'max'});
 }
 if ( !$query{'dbsettings'} ) { 
 	if ( param('dbsettings') ) {
-		our $dbsettings = quotemeta(param('dbsettings'));
+		$dbsettings = quotemeta(param('dbsettings'));
 	} else {
-		our $dbsettings = "default";
+		if ( $session->param('dbsettings') && !$load ) {
+			$dbsettings = quotemeta($session->param('dbsettings'));
+		}
 	}
 } else {
-	our $dbsettings = quotemeta($query{'dbsettings'});
+	$dbsettings = quotemeta($query{'dbsettings'});
 }
 if ($dbsettings eq "custom") {
 	our $checkeddbsettings2 = "checked=checked";
@@ -250,12 +335,14 @@ if ($dbsettings eq "custom") {
 }
 if ( !$query{'step'} ) { 
 	if ( param('step') ) {
-		our $step = quotemeta(param('step'));
+		$step = quotemeta(param('step'));
 	} else {
-		our $step = "300";
+		if ( $session->param('step') && !$load ) {
+			$step = quotemeta($session->param('step'));
+		}
 	}
 } else {
-	our $step = quotemeta($query{'step'});
+	$step = quotemeta($query{'step'});
 }
 if ($step eq "60") {
 	our $selectedstep1 = "selected=selected";
@@ -278,21 +365,25 @@ if ($step eq "60") {
 }
 if ( !$query{'start'} ) { 
 	if ( param('start') ) {
-		our $start = quotemeta(param('start'));
+		$start = quotemeta(param('start'));
 	} else {
-		our $start = "";
+		if ( $session->param('start') && !$load ) {
+			$start = $session->param('start');
+		}
 	}
 } else {
-	our $start = quotemeta($query{'start'});
+	$start = quotemeta($query{'start'});
 }
 if ( !$query{'dsname'} ) { 
 	if ( param('dsname') ) {
-		our $dsname = quotemeta(param('dsname'));
+		$dsname = quotemeta(param('dsname'));
 	} else {
-		our $dsname = "";
+		if ( $session->param('dsname') && !$load ) {
+			$dsname = quotemeta($session->param('dsname'));
+		}
 	}
 } else {
-	our $dsname = quotemeta($query{'dsname'});
+	$dsname = quotemeta($query{'dsname'});
 }
 if ($dsname eq "GAUGE") {
 	our $selecteddsname1 = "selected=selected";
@@ -311,12 +402,14 @@ if ($dsname eq "GAUGE") {
 }
 if ( !$query{'heartbeat'} ) { 
 	if ( param('heartbeat') ) {
-		our $heartbeat = quotemeta(param('heartbeat'));
+		$heartbeat = quotemeta(param('heartbeat'));
 	} else {
-		our $heartbeat = "";
+		if ( $session->param('heartbeat') && !$load ) {
+			$heartbeat = $session->param('heartbeat');
+		}
 	}
 } else {
-	our $heartbeat = quotemeta($query{'heartbeat'});
+	$heartbeat = quotemeta($query{'heartbeat'});
 }
 $i = 1;
 while ($i <= $rracount) {
@@ -324,7 +417,11 @@ while ($i <= $rracount) {
 		if ( param("cf$i") ) {
 			${cf.$i} = quotemeta(param("cf$i"));
 		} else {
-			${cf.$i} = "";
+			if ( $session->param("cf$i") && !$load ) {
+				${cf.$i} = quotemeta($session->param("cf$i"));
+			} else {
+				${cf.$i} = "";
+			}
 		}
 	} else {
 		${cf.$i} = quotemeta($query{"cf$i"});
@@ -344,7 +441,11 @@ while ($i <= $rracount) {
 		if ( param("xff$i") ) {
 			${xff.$i} = quotemeta(param("xff$i"));
 		} else {
-			${xff.$i} = "";
+			if ( $session->param("xff$i") && !$load ) {
+				${xff.$i} = $session->param("xff$i");
+			} else {
+				${xff.$i} = "";
+			}
 		}
 	} else {
 		${xff.$i} = quotemeta($query{"xff$i"});
@@ -353,7 +454,11 @@ while ($i <= $rracount) {
 		if ( param("step$i") ) {
 			${step.$i} = quotemeta(param("step$i"));
 		} else {
-			${step.$i} = "";
+			if ( $session->param("step$i") && !$load ) {
+				${step.$i} = $session->param("step$i");
+			} else {
+				${step.$i} = "";
+			}
 		}
 	} else {
 		${step.$i} = quotemeta($query{"step$i"});
@@ -362,7 +467,11 @@ while ($i <= $rracount) {
 		if ( param("rows$i") ) {
 			${rows.$i} = quotemeta(param("rows$i"));
 		} else {
-			${rows.$i} = "";
+			if ( $session->param("rows$i") && !$load ) {
+				${rows.$i} = $session->param("rows$i");
+			} else {
+				${rows.$i} = "";
+			}
 		}
 	} else {
 		${rows.$i} = quotemeta($query{"rows$i"});
@@ -371,33 +480,186 @@ while ($i <= $rracount) {
 }
 if ( !$query{'savedbsettings'} ) {
         if ( param('savedbsettings') ) {
-                our $savedbsettings = quotemeta(param('savedbsettings'));
+		$savedbsettings = quotemeta(param('savedbsettings'));
         } else {
-                our $savedbsettings = 0;
+		if ( $session->param('savedbsettings') && !$load ) {
+			$savedbsettings = quotemeta($session->param('savedbsettings'));
+		}
         }
 } else {
-        our $savedbsettings = quotemeta($query{'savedbsettings'});
+	$savedbsettings = quotemeta($query{'savedbsettings'});
+}
+if ( $savedbsettings ) {
+	$checkedsavedbsettings = "checked=checked";
 }
 if ( !$query{'savedbsettingsname'} ) {
         if ( param('savedbsettingsname') ) {
-                our $savedbsettingsname = quotemeta(param('savedbsettingsname'));
+		$savedbsettingsname = quotemeta(param('savedbsettingsname'));
         } else {
-                our $savedbsettingsname = "";
+		if ( $session->param('savedbsettingsname') && !$load ) {
+			$savedbsettingsname = $session->param('savedbsettingsname');
+		}
         }
 } else {
-        our $savedbsettingsname = quotemeta($query{'savedbsettingsname'});
+	$savedbsettingsname = quotemeta($query{'savedbsettingsname'});
+}
+if ( !$query{'place'} ) { 
+	if ( param('place') ) {
+		$place = quotemeta(param('place'));
+	} else {
+		if ( $session->param('place') && !$load ) {
+			$place = $session->param('place');
+		}
+	}
+} else {
+	$place = quotemeta($query{'place'});
+}
+if ( !$query{'placenew'} ) { 
+	if ( param('placenew') ) {
+		$placenew = quotemeta(param('placenew'));
+	} else {
+		if ( $session->param('placenew') && !$load ) {
+			$placenew = $session->param('placenew');
+		}
+	}
+} else {
+	$placenew = quotemeta($query{'placenew'});
+}
+if ( $placenew ) {
+	$place = $placenew;
+}
+if ( !$query{'category'} ) { 
+	if ( param('category') ) {
+		$category = quotemeta(param('category'));
+	} else {
+		if ( $session->param('category') && !$load ) {
+			$category = $session->param('category');
+		}
+	}
+} else {
+	$category = quotemeta($query{'category'});
+}
+if ( !$query{'categorynew'} ) { 
+	if ( param('categorynew') ) {
+		$categorynew = quotemeta(param('categorynew'));
+	} else {
+		if ( $session->param('categorynew') && !$load ) {
+			$categorynew = $session->param('categorynew');
+		}
+	}
+} else {
+	$categorynew = quotemeta($query{'categorynew'});
+}
+if ( $categorynew ) {
+	$category = $categorynew;
+}
+if ( !$query{'uid'} ) { 
+	if ( param('uid') ) {
+		$uid = quotemeta(param('uid'));
+	} else {
+		if ( $session->param('uid') && !$load ) {
+			$uid = $session->param('uid');
+		}
+	}
+} else {
+	$uid = quotemeta($query{'uid'});
+}
+if ( !$query{'unit'} ) { 
+	if ( param('unit') ) {
+		$unit = quotemeta(param('unit'));
+	} else {
+		if ( $session->param('unit') && !$load ) {
+			$unit = $session->param('unit');
+		}
+	}
+} else {
+	$unit = quotemeta($query{'unit'});
+}
+if ( !$query{'block'} ) { 
+	if ( param('block') ) {
+		$block = quotemeta(param('block'));
+	} else {
+		if ( $session->param('block') && !$load ) {
+			$block = $session->param('block');
+		}
+	}
+} else {
+	$block = quotemeta($query{'block'});
 }
 
-# Clean up variables
-$saveformdata =~ tr/0-1//cd;
-$saveformdata = substr($saveformdata,0,1);
+# Places and category list - sort in alphabetical order
+open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat") || die "Cannot open database for RRD-databases.";
+flock(F,2);
+@lines = <F>;
+close(F);
+
+# Places
+our @places;
+foreach (@lines){
+	s/[\n\r]//g;
+	# Skip comments
+	my $commentchar = substr($_,0,1);
+	if ($commentchar eq "#" || $_ eq "") {
+		next;
+	}
+	@fields = split(/\|/);
+	our $placeselectmenu;
+	$found = 0;
+	foreach (@places) {
+		if ($_ eq @fields[7]) {
+			$found = 1;
+		}
+	}
+	if (!$found) {
+		push (@places,"@fields[7]");
+	}
+}
+
+# Sorting and creating select list
+my @placessorted = sort { lc($a) cmp lc($b) } @places;
+foreach (@placessorted){
+	if ( $_ eq $place ) {
+		$placeselectmenu .= "<option value='$_' selected=selected>$_</option>";
+	} else {
+		$placeselectmenu .= "<option value='$_'>$_</option>";
+	}
+}
+
+# Categories
+our @categories;
+foreach (@lines){
+	s/[\n\r]//g;
+	# Skip comments
+	my $commentchar = substr($_,0,1);
+	if ($commentchar eq "#" || $_ eq "") {
+		next;
+	}
+	@fields = split(/\|/);
+	our $categoryselectmenu;
+	$found = 0;
+	foreach (@categories) {
+		if ($_ eq @fields[8]) {
+			$found = 1;
+		}
+	}
+	if (!$found) {
+		push (@categories,"@fields[8]");
+	}
+}
+
+# Sorting and creating select list
+my @categoriessorted = sort { lc($a) cmp lc($b) } @categories;
+foreach (@categoriessorted){
+	if ( $_ eq $category ) {
+		$categoryselectmenu .= "<option value='$_' selected=selected>$_</option>";
+	} else {
+		$categoryselectmenu .= "<option value='$_'>$_</option>";
+	}
+}
+
+# Filter
 $savedbsettings =~ tr/0-1//cd;
 $savedbsettings = substr($savedbsettings,0,1);
-
-# Init Language
-# Clean up lang variable
-$lang =~ tr/a-z//cd;
-$lang = substr($lang,0,2);
 
 # If there's no language phrases file for choosed language, use german as default
 if (!-e "$installfolder/templates/plugins/$psubfolder/$lang/language.dat") {
@@ -412,7 +674,7 @@ our $pphrase = new Config::Simple($planguagefile);
 # Main program
 ##########################################################################
 
-if ($saveformdata || $script) {
+if ($save || $script) {
   &save;
 
 } else {
@@ -543,6 +805,12 @@ sub form {
 sub save 
 {
 
+	# Take me back here in case of an error
+	our $backurl = "./addstat.cgi?sid=$sid";
+
+	# Save CGI session
+	$session->save_param($cgi);
+
 	# Check values
 	if ( !$loxonename ) {
 		$error = $pphrase->param("TXT0003");
@@ -586,7 +854,7 @@ sub save
 
 	# Test if Miniserver is reachable - Try 5 times before giving up
 	$loxonenameurlenc = uri_escape( unquotemeta($loxonename) );
-	$url = "http://$miniserveradmin:$miniserverpass\@$miniserverip\:$miniserverport/dev/sps/io/$loxonenameurlenc/astate";
+	$url = "http://$miniserveradmin:$miniserverpass\@$miniserverip\:$miniserverport/dev/sps/io/$loxonenameurlenc/all";
 
 	our $found = 0;
 	our $i = 0;
@@ -620,6 +888,11 @@ sub save
 			next;	
 		} else {
 			$found = 1;
+			# Filter units
+			if ( !$unit ) {
+				$unit = $xml->{value};
+				$unit =~ s/^([\d\.\ ]+)(.*)/$2/g;
+			}
 		}
 		$i++;
 	}
@@ -719,7 +992,7 @@ sub save
 	$command = unquotemeta($command);
 	$output = qx(/usr/bin/rrdtool create $command 2>&1);
 	if ( $? > 0 || !-e "$installfolder/data/plugins/$psubfolder/databases/$dbfilename.rrd" ) {
-		$error = $pphrase->param("TXT0010") . " " . $pphrase->param("TXT0011") . "<br><br><pre>" . $output . "</pre><br><br>" . $pphrase->param("TXT0012") . "<br><br><pre>" . "/usr/bin/rrdtool create " . $command . "</pre>";
+		$error = $pphrase->param("TXT0010") . " " . $pphrase->param("TXT0011") . "<br><br><textarea name='textarea1' id='textarea1' readonly>" . $output . "</textarea><br><br>" . $pphrase->param("TXT0012") . "<br><br><textarea name='textarea2' id='textarea2' readonly>" . "/usr/bin/rrdtool create " . $command . "</textarea>";
 		&error;
 	}
 
@@ -729,7 +1002,12 @@ sub save
 		binmode F, ':encoding(UTF-8)';
 		$description = Encode::decode( "UTF-8", unquotemeta($description) );
 		$loxonename = Encode::decode( "UTF-8", unquotemeta($loxonename) );
-		print F "$dbfilename|$step|$description|$loxonename|$miniserver|$min|$max\n";
+		$place = Encode::decode( "UTF-8", unquotemeta($place) );
+		$category = Encode::decode( "UTF-8", unquotemeta($category) );
+		$uid = unquotemeta($uid);
+		$unit = unquotemeta($unit);
+		$block = unquotemeta($block);
+		print F "$dbfilename|$step|$description|$loxonename|$miniserver|$min|$max|$place|$category|$uid|$unit|$block\n";
 	close(F);
 
 	# Create status file
@@ -741,6 +1019,7 @@ sub save
 	# Create info file
 	open(F,">$installfolder/data/plugins/$psubfolder/databases/$dbfilename.info") || die "Cannot open info file for RRD-database.";
 	flock(F, 2);
+	print F "http://USERNAME:PASSWORD\@$miniserverip:$miniserverport/dev/sps/io/$loxonenameurlenc/astate\n\n";
 	print F "/usr/bin/rrdtool create $command 2>&1\n\n";
 	$output = qx(/usr/bin/rrdinfo $installfolder/data/plugins/$psubfolder/databases/$dbfilename.rrd 2>&1);
 	print F $output;
@@ -788,8 +1067,10 @@ sub save
 		close(F);
 		&footer;
 	} else {
-		print "Content-Type: text/plain\n\n"; 
-		print "+++OK+++".$pphrase->param("TXT0002")."+++$dbfilename";
+		if ( !$commandline ) {
+			print "Content-Type: text/plain\n\n"; 
+		}
+		print "+++OK+++".$pphrase->param("TXT0002")."+++$dbfilename\n";
 	}
 	exit;
 		
@@ -805,7 +1086,7 @@ sub error
 		$template_title = $pphrase->param("TXT0000") . " - " . $pphrase->param("TXT0001");
 		print "Content-Type: text/html\n\n"; 
 		&lbheader;
-		open(F,"$installfolder/templates/system/$lang/error.html") || die "Missing template system/$lang/error.html";
+		open(F,"$installfolder/templates/plugins/$psubfolder/$lang/error.html") || die "Missing template templates/plugins/$psubfolder/$lang/error.html";
 		while (<F>) 
 		{
 			$_ =~ s/<!--\$(.*?)-->/${$1}/g;
@@ -814,8 +1095,10 @@ sub error
 		close(F);
 		&footer;
 	} else {
-		print "Content-Type: text/plain\n\n"; 
-		print "+++ERROR+++".$error;
+		if ( !$commandline ) {
+			print "Content-Type: text/plain\n\n"; 
+		}
+		print "+++ERROR+++".$error."\n";
 	}
 	exit;
 }

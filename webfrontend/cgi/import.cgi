@@ -370,7 +370,7 @@ sub save
 			my $stat_ms = param("msnr_$line");
 			# URI-Escape has to be undone when writing the job!
 			
-			my $statfullurl = $addstat_urlbase . "?script=1&loxonename=$loxonename&description=$description&settings=$settings&miniserver=$stat_ms&minval=$minval&maxval=$maxval&place=$place&category=$category&uid=$loxuid";
+			my $statfullurl = $addstat_urlbase . "?script=1&loxonename=$loxonename&description=$description&settings=$settings&miniserver=$stat_ms&min=$minval&max=$maxval&place=$place&category=$category&uid=$loxuid";
 			logger(4, "addstat URL " . $statfullurl);
 			 
 # Quick and dirty DB duplicate search (Michael will add this in addstat.cgi)
