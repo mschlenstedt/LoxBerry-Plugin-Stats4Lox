@@ -298,37 +298,6 @@ sub form {
 sub save 
 {
 
-	# Check values
-
-#	my $miniserverip        = $cfg->param("MINISERVER$miniserver.IPADDRESS");
-#	my $miniserverport      = $cfg->param("MINISERVER$miniserver.PORT");
-#	my $miniserveradmin     = $cfg->param("MINISERVER$miniserver.ADMIN");
-#	my $miniserverpass      = $cfg->param("MINISERVER$miniserver.PASS");
-#	my $miniserverclouddns  = $cfg->param("MINISERVER$miniserver.USECLOUDDNS");
-#	my $miniservermac       = $cfg->param("MINISERVER$miniserver.CLOUDURL");
-
-#	# Use Cloud DNS?
-#	if ($miniserverclouddns) {
-#		$output = qx($home/bin/showclouddns.pl $miniservermac);
-#		@fields = split(/:/,$output);
-#		$miniserverip   = $fields[0];
-#		$miniserverport = $fields[1];
-#	}
-
-#	# Print template
-#	$template_title = $pphrase->param("TXT0000") . " - " . $pphrase->param("TXT0001");
-#	$message = $pphrase->param("TXT0002");
-#	$nexturl = "./import.cgi?do=form";
-#
-#	print "Content-Type: text/html\n\n"; 
-#	&lbheader;
-#	open(F,"$installfolder/templates/system/$lang/success.html") || die "Missing template system/$lang/success.html";
-#	while (<F>) 
-#	{
-#		$_ =~ s/<!--\$(.*?)-->/${$1}/g;
-#		print $_;
-#	}
-#	close(F);
 #	&footer;
 
 	# On saving form, parse form data and create import jobs in FS
@@ -369,6 +338,8 @@ sub save
 			my $place = uri_escape( param("place_$line") );
 			my $category = uri_escape( param("category_$line") );
 			my $stat_ms = param("msnr_$line");
+			my $unit = param("unit_$line");
+			
 			# URI-Escape has to be undone when writing the job!
 			
 			my $statfullurl = $addstat_urlbase . "?script=1&loxonename=$loxonename&description=$description&settings=$settings&miniserver=$stat_ms&min=$minval&max=$maxval&place=$place&category=$category&uid=$loxuid";
@@ -578,11 +549,13 @@ sub generate_import_table
 				<td align="center" class="tg-yw4l" title="' . $StatTypes{$lox_statsobject{$statsobj}{StatsType}} . '"><div class="tooltip">' . $lox_statsobject{$statsobj}{StatsType} .  '</div><input type="hidden" name="statstype_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{StatsType} . '"></td>
 				<td align="center" class="tg-yw4l">' . $lox_statsobject{$statsobj}{MinVal} . '<input type="hidden" name="minval_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MinVal} . '"></td>
 				<td align="center" class="tg-yw4l">' . $lox_statsobject{$statsobj}{MaxVal} . '<input type="hidden" name="maxval_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MaxVal} . '"></td>
+				<td align="center" class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Unit}) . '<input type="hidden" name="unit_' . $table_linecount . '" value="' . encode_entities($lox_statsobject{$statsobj}{Unit}) . '"></td>
 				<td class="tg-yw4l">' . $statdef_dropdown . '<input type="hidden" name="statdef_' . $table_linecount . '" value="' . $statdef . '"></td>
 				<td align="center" class="tg-yw4l"> 
 				<input data-mini="true" type="checkbox" name="doimport_' . $table_linecount . '" value="import">
 				<input type="hidden" name="msnr_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MSNr} . '">
 				<input type="hidden" name="msip_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MSIP} . '">
+				
 				<input type="hidden" name="loxuid_' . $table_linecount . '" value="' . $statsobj . '">
 				</td>
 			  </tr>
@@ -604,6 +577,23 @@ sub get_jobname_from_filename
 #####################################################
 # Read LoxPLAN XML
 #####################################################
+
+# Must be global: %lox_statsobject
+# What you get:
+# - Key of the hash is UUID
+# - Every key contains
+	# {Title} Object name (Bezeichnung)
+	# {Desc} Object description (Beschreibung). If empty--> Object name (*)
+	# {StatsType} Statistics type 1..7
+	# {Type} Type name of the Loxone input/output/function
+	# {MSName} Name of the Miniserver
+	# {MSIP} IP of the Miniserver
+	# {MSNr} ID of the Miniserver in LoxBerry General Config
+	# {Unit} Unit to display in the Loxone App (stripped from Loxone syntax <v.1>)
+	# {Category} Name of the category
+	# {Place} Name of the place (room)
+	# {MinVal} Defined minimum value or string 'U' for undefined
+	# {MaxVal} Defined maximum value or string 'U' for undefined
 
 sub readloxplan
 {
