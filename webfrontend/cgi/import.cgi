@@ -30,6 +30,7 @@ use File::Path qw(make_path);
 use File::stat;
 use HTML::Entities;
 use HTTP::Request;
+#use HTML::Restrict;
 use LWP::UserAgent;
 use POSIX qw(strftime);
 use String::Escape qw( unquotemeta );
@@ -617,10 +618,11 @@ sub readloxplan
 
 	# Prepare data from LoxPLAN file
 	my $parser = XML::LibXML->new();
-	my $lox_xml = $parser->parse_file($loxconfig_path);
-	if (! $lox_xml) {
+	eval { our $lox_xml = $parser->parse_file($loxconfig_path);	};
+	if ($@) {
 		logger(1, "import.cgi: Cannot parse LoxPLAN XML file.");
-		exit(-1);
+		#exit(-1);
+		return;
 	}
 
 	# Read Loxone Miniservers
@@ -647,6 +649,8 @@ sub readloxplan
 	}
 
 	# Get all objects that have statistics enabled
+	#my $hr = HTML::Restrict->new();
+			
 	foreach my $object ($lox_xml->findnodes('//C[@StatsType]')) {
 		# Get Miniserver of this object
 		# Nodes with statistics may be a child or sub-child of LoxLive type, or alternatively Ref-er to the LoxLive node. 
@@ -673,6 +677,17 @@ sub readloxplan
 		$lox_statsobject{$object->{U}}{MSName} = $lox_miniserver{$ms_ref}{Title};
 		$lox_statsobject{$object->{U}}{MSIP} = $lox_miniserver{$ms_ref}{IP};
 		$lox_statsobject{$object->{U}}{MSNr} = $cfg_mslist{$lox_miniserver{$ms_ref}{IP}};
+		
+		# Unit
+		my @display = $object->getElementsByTagName("Display");
+		if($display[0]->{Unit}) { 
+			$lox_statsobject{$object->{U}}{Unit} = $display[0]->{Unit};
+			$lox_statsobject{$object->{U}}{Unit} =~ s|<.+?>||g;
+			$lox_statsobject{$object->{U}}{Unit} = trim($lox_statsobject{$object->{U}}{Unit});
+			logger (4, "Unit: " . $lox_statsobject{$object->{U}}{Unit});
+		} else { 
+			logger (4, "Unit: " . $display[0]->{Unit} . " (none detected)");
+		}
 		
 		# Place and Category
 		my @iodata = $object->getElementsByTagName("IoData");
@@ -767,6 +782,12 @@ sub error
 	  close(F);
 	}
 
+#####################################################
+# Trim
+#####################################################
+	
+sub  trim { my $s = shift; $s =~ s/^\s+|\s+$//g; return $s };
+	
 #####################################################
 # Logging
 #####################################################
