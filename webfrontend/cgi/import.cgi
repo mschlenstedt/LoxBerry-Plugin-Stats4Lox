@@ -83,7 +83,7 @@ our %StatTypes = ( 	1, "Jede Änderung (max. ein Wert pro Minute)",
 ##########################################################################
 
 # Version of this script
-$version = "0.1.2";
+$version = "0.1.3";
 
 # Figure out in which subfolder we are installed
 our $psubfolder = abs_path($0);
@@ -310,138 +310,227 @@ sub save
 	
 	# Looping through post formdata lines
 	
-	my $addstat_urlbase = "http://localhost/admin/plugins/$psubfolder/addstat.cgi";
+	# my $addstat_urlbase = "http://localhost/admin/plugins/$psubfolder/addstat.cgi";
+	# my $addstat_basecommand = "perl $home/webfrontend/cgi/plugins/$psubfolder/addstat.cgi";
+	  my $addstat_basecommand = "./addstat.cgi";
 	
 	eval { make_path($job_basepath) };
 	if ($@) {
 		logger(1, "Couldn't create $job_basepath: $@");
 	}
-	
-	
+		
 	logger(4, "Stats import path: $job_basepath");
 	
+	# Read databases file for names and db id's for uniquness check
+	my %databases_by_name = get_databases_by_name();
 	
 	for (my $line = 1; $line <= $form_linenumbers; $line++) {
 		logger(4, "Line " . $line . ": UID " . param("loxuid_" . $line));
-		if ( param("doimport_$line") eq 'import' ) {
-			logger(4, "IMPORT Line " . $line . ": UID " . param("loxuid_$line"));
-			
-			# Call Michaels addstat.cgi by URL to create RRD archive
-			my $loxonename = uri_escape( param("title_$line") );
-			my $loxuid = param("loxuid_$line");
-			my $statstype = param("statstype_$line");
-			my $description = uri_escape( param("desc_$line") . " (" . $loxuid . ")" );
-			# settings need some code to get dbsettings.datfrom Michael
-			my $settings = "";
-			my $minval = param("minval_$line");
-			my $maxval = param("maxval_$line");
-			my $place = uri_escape( param("place_$line") );
-			my $category = uri_escape( param("category_$line") );
-			my $stat_ms = param("msnr_$line");
-			my $unit = param("unit_$line");
-			
-			# URI-Escape has to be undone when writing the job!
-			
-			my $statfullurl = $addstat_urlbase . "?script=1&loxonename=$loxonename&description=$description&settings=$settings&miniserver=$stat_ms&min=$minval&max=$maxval&place=$place&category=$category&uid=$loxuid";
-			logger(4, "addstat URL " . $statfullurl);
-			 
-# Quick and dirty DB duplicate search (Michael will add this in addstat.cgi)
-
-			# Read Stats4Lox databases
-			# Re-used from Michael dbinfo.cgi
-			open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
-			my @data = <F>;
-			close (F) ;
-				
-			# Loop over DB
-			our $db_duplicate_exists = 0;
-			foreach (@data){
-				# my @single_template = @template;
-				s/[\n\r]//g;
-				# Comments
-				if ($_ =~ /^\s*#.*/) {
-					next;
-				}
-				@fields = split(/\|/);
-				
-				my $dbnr = $fields[0];
-				my $unique_name = $fields[3];
-				if (lc($unique_name) eq lc(uri_unescape($loxonename))) {
-					$db_duplicate_exists = $dbnr;
-					logger(3, "DB duplicate check: $unique_name already found with ID $dbnr");
-					last;
-				}
-			}
-			 
-			# If no duplicate, call addstat.cgi
-			if (! $db_duplicate_exists) {
-# Michael is changing the addstat interface from web call to local execution
-				# HTTP Request
-				my $ua = LWP::UserAgent->new;
-				my $resp = $ua->get($statfullurl);
-				if ($resp->is_success) {
-					my $message = $resp->decoded_content;
-					logger (3, "Successful addstat http request");
-					logger (4, "HTTP reply: " . $message);
-					
-					# Format addstat response to get useful output
-					my @stat_message = split /\+/, $message;
-					logger(4, "Resp_Status: $stat_message[3] Resp_Text $stat_message[6] Resp_DBID $stat_message[9]");
-					my $resp_status = $stat_message[3];
-					my $resp_message = $stat_message[6];
-					$resp_dbnr = $stat_message[9];
-					if ($resp_status eq "OK" && $resp_dbnr > 0) {
-						logger(3, "addstat - RRD successfully created with DB-Nr $resp_dbnr");
-					# Addstat successfully called 
-					} else {
-					# Addstat running but failed
-					logger(2, "addstat not successfully. Returned $resp_status - $resp_message");
-					}
-				} else {
-				# Addstat URL Call failed
-				logger(1, "Calling addstat URL returns an error:");
-				logger(1, "HTTP GET error: " . $resp->code . " " . $resp->message);
-				}	
-			} else { $resp_dbnr = $db_duplicate_exists; }
-			
-			if ($resp_dbnr > 0)	{
-				# Check if a job is already running
-				if (! glob("$job_basepath/$loxuid.running.*" )) {
-					# Not running - create job
-					$job = new Config::Simple(syntax=>'ini');
-					$job->param("loxonename", 	uri_unescape($loxonename));
-					$job->param("loxuid", 		$loxuid);
-					$job->param("statstype", 	$statstype);
-					$job->param("description", 	uri_unescape($description));
-					$job->param("settings",		$settings);
-					$job->param("minval",		$minval);
-					$job->param("maxval",		$maxval);
-					$job->param("place",		uri_unescape($place));
-					$job->param("category",		uri_unescape($category));
-					$job->param("ms_nr",		$stat_ms);
-					$job->param("db_nr",		$resp_dbnr);
-					$job->param("import_epoch",	"0");
-					$job->param("useramdisk",	"Fast");
-					$job->param("loglevel",		"4");
-					$job->param("Last status",	"Scheduled");
-					$job->param("try",			"1");
-					$job->param("maxtries",		"5");
-					$job->write("$job_basepath/$loxuid.job") or logger (1, "Could not create job file for $loxonename with DB number $resp_dbnr");
-					undef $job;
-				} else { 
-					# Running state - do not create new job
-					logger (2, "Job $loxonename ($loxuid) is currently in 'Running' state and will not be created again.");
-				}
-			}	
-				
-		# End of activated lines loop
+		if ( param("doimport_$line") ne 'import' ) {
+				next;
 		}
+		logger(4, "IMPORT Line " . $line . ": UID " . param("loxuid_$line"));
+		
+		# Call Michaels addstat.cgi by URL to create RRD archive
+		# #With commandline, URI-encoding not necessary anymore - hopefully (everything UTF-8)
+		# my $loxonename = uri_escape( param("title_$line") );
+		# my $loxuid = param("loxuid_$line");
+		# my $statstype = param("statstype_$line");
+		# my $description = uri_escape( param("desc_$line") . " (" . $loxuid . ")" );
+		# # settings need some code to get dbsettings.datfrom Michael
+		# my $settings = "";
+		# my $minval = param("minval_$line");
+		# my $maxval = param("maxval_$line");
+		# my $place = uri_escape( param("place_$line") );
+		# my $category = uri_escape( param("category_$line") );
+		# my $stat_ms = param("msnr_$line");
+		# my $unit = uri_escape( param("unit_$line"));
+		## URI-Escape has to be undone when writing the job!
+		
+
+		# Call Michaels addstat.cgi by URL to create RRD archive
+		my $loxonename = param("title_$line");
+		my $loxuid = param("loxuid_$line");
+		my $statstype = param("statstype_$line");
+		my $description = param("desc_$line");
+		# settings need some code to get dbsettings.datfrom Michael
+		my $settings = "";
+		my $minval = param("minval_$line");
+		my $maxval = param("maxval_$line");
+		my $place = param("place_$line");
+		my $category = param("category_$line");
+		my $stat_ms = param("msnr_$line");
+		my $unit = param("unit_$line");
+		my $loxtype = param("type_$line");
+
+
+		# Check if loxonename already exists in databases list
+		if (! defined $databases_by_name{lc($loxonename)}) {
+		# # Michael is changing the addstat interface from web call to local execution
+			# # HTTP Request
+# #			my $statfullurl = $addstat_urlbase . "?script=1&loxonename=$loxonename&description=$description&settings=$settings&miniserver=$stat_ms&min=$minval&max=$maxval&place=$place&category=$category&uid=$loxuid";
+# #			logger(4, "addstat URL " . $statfullurl);
+
+			# my $ua = LWP::UserAgent->new;
+			# my $resp = $ua->get($statfullurl);
+			# if ($resp->is_success) {
+				# my $message = $resp->decoded_content;
+				# logger (3, "Successful addstat http request");
+				# logger (4, "HTTP reply: " . $message);
+				
+				# # Format addstat response to get useful output
+				# my @stat_message = split /\+/, $message;
+				# logger(4, "Resp_Status: $stat_message[3] Resp_Text $stat_message[6] Resp_DBID $stat_message[9]");
+				# my $resp_status = $stat_message[3];
+				# my $resp_message = $stat_message[6];
+				# $resp_dbnr = $stat_message[9];
+				# if ($resp_status eq "OK" && $resp_dbnr > 0) {
+					# logger(3, "addstat - RRD successfully created with DB-Nr $resp_dbnr");
+				# # Addstat successfully called 
+				# } else {
+				# # Addstat running but failed
+				# logger(2, "addstat not successfully. Returned $resp_status - $resp_message");
+				# }
+			# } else {
+			# # Addstat URL Call failed
+			# logger(1, "Calling addstat URL returns an error:");
+			# logger(1, "HTTP GET error: " . $resp->code . " " . $resp->message);
+			# }	
+		# } else { $resp_dbnr = $db_duplicate_exists; }
+		
+			
+			#
+			# Call addstat by commandline
+			#
+			
+			# Example from Michael
+			# ./addstat.cgi 
+			# --script 
+			# --settings 1 
+			# --loxonename "Akt Luftfeuchtigkeit" 
+			# --miniserver 1 
+			# --description "Luftfeuchtigkeit 289c2d05a8-8602-11e3-89cfb70a5529d684" 
+			# --min U 
+			# --max 100 
+			# --place "Wohnzimmer" 
+			# --category "Klima" 
+			# --uid "289c2d05a8-8602-11e3-89cfb70a5529d684" 
+			# --unit "%"
+			# --block "Virtual Status" 
+			
+		
+			my $commandline_options = 
+			"--script " .
+			"--settings=$settings " .
+			"--loxonename=\"$loxonename\" " . 
+			"--miniserver=$stat_ms " .
+			"--description=\"$description\" " .
+			"--min=$minval " .
+			"--max=$maxval " .
+			"--place=\"$place\" " .
+			"--category=\"$category\" " .
+			"--uid=$loxuid " .
+			"--unit=\"$unit\" " .
+			"--block=\"$loxtype\" ";
+			
+			logger (4, "Statistic is new - calling addstat " . $commandline_options);
+			# Call the command
+			my $message = `perl $addstat_basecommand $commandline_options`;		
+			logger (4, "addstat command reply: " . $message);
+			
+			# Format addstat response to get useful output
+			my @stat_message = split /\+/, $message;
+			logger(4, "Resp_Status: $stat_message[3] Resp_Text $stat_message[6] Resp_DBID $stat_message[9]");
+			my $resp_status = $stat_message[3];
+			my $resp_message = $stat_message[6];
+			$resp_dbnr = $stat_message[9];
+			if ($resp_status eq "OK" && $resp_dbnr > 0) {
+				# Addstat successfully called 
+				logger(3, "addstat - RRD successfully created with DB-Nr $resp_dbnr");
+			} else {
+				# Addstat running but failed - exit this statistic and go further
+				logger(2, "addstat not successfully. Returned $resp_status - $resp_message");
+				next;
+			}
+
+		} else {
+			# This is what happens if loxonename is a duplicate
+			logger (4, "Database already exists - directly create import job without addstat");
+			$resp_dbnr = $databases_by_name{lc($loxonename)}{dbid};
+		}
+		
+		#
+		# Creating the job
+		# 
+		
+		if ($resp_dbnr > 0)	{
+			# Check if a job is already running
+			if (! glob("$job_basepath/$loxuid.running.*" )) {
+				# Not running - create job
+				$job = new Config::Simple(syntax=>'ini');
+				$job->param("loxonename", 	uri_unescape($loxonename));
+				$job->param("loxuid", 		$loxuid);
+				$job->param("statstype", 	$statstype);
+				$job->param("description", 	uri_unescape($description));
+				$job->param("settings",		$settings);
+				$job->param("minval",		$minval);
+				$job->param("maxval",		$maxval);
+				$job->param("place",		uri_unescape($place));
+				$job->param("category",		uri_unescape($category));
+				$job->param("ms_nr",		$stat_ms);
+				$job->param("db_nr",		$resp_dbnr);
+				$job->param("import_epoch",	"0");
+				$job->param("useramdisk",	"Fast");
+				$job->param("loglevel",		"4");
+				$job->param("Last status",	"Scheduled");
+				$job->param("try",			"1");
+				$job->param("maxtries",		"5");
+				$job->write("$job_basepath/$loxuid.job") or logger (1, "Could not create job file for $loxonename with DB number $resp_dbnr");
+				undef $job;
+			} else { 
+				# Running state - do not create new job
+				logger (2, "Job $loxonename ($loxuid) is currently in 'Running' state and will not be created again.");
+			}
+		}	
+			
+	
 	# End of lines loop
 	}
 	# For debugging, quit everything (will generate an error 500)
 	# exit;
 		
 }
+
+#####################################################
+# Create hash of DBs by loxonename
+#####################################################
+
+sub get_databases_by_name 
+{
+	
+	my %entries;
+	# Quick and dirty DB duplicate search (Michael will add this in addstat.cgi)
+
+	# Read Stats4Lox databases
+	# Re-used from Michael dbinfo.cgi
+	
+	open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
+	my @data = <F>;
+	close (F) ;
+		
+	# Loop over DB
+	foreach (@data){
+		# my @single_template = @template;
+		s/[\n\r]//g;
+		# Comments
+		if ($_ =~ /^\s*#.*/) {
+			next;
+		}
+		@fields = split(/\|/);
+		$entries{lc($fields[3])}{dbid} = $fields[0];
+	}
+	return %entries;
+}	 
 
 #####################################################
 # Save Loxplan file
@@ -526,7 +615,8 @@ sub generate_import_table
 	}
 		
 	# Loop the statistic objects
-	foreach my $statsobj (keys %lox_statsobject) {
+	foreach my $statsobj (sort keys %lox_statsobject) {
+	#foreach my $statsobj (sort  {$lox_statsobject{$b}{Title} <=> $lox_statsobject{$a}{Title}}    keys (%lox_statsobject)) {
 		$table_linecount = $table_linecount + 1;
 			
 		# logger (4, $statsobj{Title});
@@ -555,7 +645,7 @@ sub generate_import_table
 				<input data-mini="true" type="checkbox" name="doimport_' . $table_linecount . '" value="import">
 				<input type="hidden" name="msnr_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MSNr} . '">
 				<input type="hidden" name="msip_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MSIP} . '">
-				
+				<input type="hidden" name="type_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{Type} . '">
 				<input type="hidden" name="loxuid_' . $table_linecount . '" value="' . $statsobj . '">
 				</td>
 			  </tr>
