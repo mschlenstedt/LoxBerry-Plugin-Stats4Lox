@@ -19,6 +19,9 @@
 # Modules
 ##########################################################################
 
+use lib './lib';
+use LoxBerry::Stats4Lox;
+
 use CGI;
 use CGI::Carp qw(fatalsToBrowser);
 use CGI qw/:standard/;
@@ -214,18 +217,6 @@ sub form {
 		$upload_message = "Lade deine Loxone Konfiguration (.loxone bzw. .LoxPlan Datei) hoch. Daraus wird ausgelesen, welche Statistiken du aktuell aktiviert hast.";
 	}
 
-	# Read Stat definitions and prepare dropdown string
-	# UNFINISHED
-	our $statdef_dropdown;
-	$statdef_dropdown = '
-		<select data-mini="true" name="statdef">
-			<option selected>Standard</option>
-			<option>Definition 1</option>
-			<option>Definition 2</option>
-			<option>Definition 3</option>
-			<option>Definition 4</option>
-		</select>';
-	
 	our $table_linecount = 0;
 	generate_import_table();
 		
@@ -322,7 +313,7 @@ sub save
 	logger(4, "Stats import path: $job_basepath");
 	
 	# Read databases file for names and db id's for uniquness check
-	my %databases_by_name = get_databases_by_name();
+	my %databases_by_name = LoxBerry::Stats4Lox::get_databases_by_name();
 	
 	for (my $line = 1; $line <= $form_linenumbers; $line++) {
 		logger(4, "Line " . $line . ": UID " . param("loxuid_" . $line));
@@ -353,8 +344,7 @@ sub save
 		my $loxuid = param("loxuid_$line");
 		my $statstype = param("statstype_$line");
 		my $description = param("desc_$line");
-		# settings need some code to get dbsettings.datfrom Michael
-		my $settings = "";
+		my $settings = param("statdef_$line");
 		my $minval = param("minval_$line");
 		my $maxval = param("maxval_$line");
 		my $place = param("place_$line");
@@ -501,36 +491,6 @@ sub save
 		
 }
 
-#####################################################
-# Create hash of DBs by loxonename
-#####################################################
-
-sub get_databases_by_name 
-{
-	
-	my %entries;
-	# Quick and dirty DB duplicate search (Michael will add this in addstat.cgi)
-
-	# Read Stats4Lox databases
-	# Re-used from Michael dbinfo.cgi
-	
-	open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
-	my @data = <F>;
-	close (F) ;
-		
-	# Loop over DB
-	foreach (@data){
-		# my @single_template = @template;
-		s/[\n\r]//g;
-		# Comments
-		if ($_ =~ /^\s*#.*/) {
-			next;
-		}
-		@fields = split(/\|/);
-		$entries{lc($fields[3])}{dbid} = $fields[0];
-	}
-	return %entries;
-}	 
 
 #####################################################
 # Save Loxplan file
@@ -613,11 +573,27 @@ sub generate_import_table
 			$lox_statsobject{$jobname}{TableColor} = $ImportStates{'running'};
 		}
 	}
+	
+	# Read Stat definitions and prepare dropdown string
+	# Read dbsettings names
+	my %dbsettings = LoxBerry::Stats4Lox::get_dbsettings();
 		
 	# Loop the statistic objects
 	foreach my $statsobj (sort keys %lox_statsobject) {
 	#foreach my $statsobj (sort  {$lox_statsobject{$b}{Title} <=> $lox_statsobject{$a}{Title}}    keys (%lox_statsobject)) {
 		$table_linecount = $table_linecount + 1;
+		
+		my $statdef_dropdown = "<select data-mini=\"true\" name=\"statdef_$table_linecount\">\n";
+		my $statdef_nr = 0;
+		foreach my $statdef (sort keys %dbsettings) {
+			$statdef_nr++;
+			if ($statdef_nr == 1) {
+				$statdef_dropdown .= "<option selected value=\"$statdef_nr\">$dbsettings{$statdef}{Name}</option>\n";
+			} else {
+				$statdef_dropdown .= "<option value=\"$statdef_nr\">$dbsettings{$statdef}{Name}</option>\n";
+			}
+		}
+		$statdef_dropdown .= "</select>\n";
 			
 		# logger (4, $statsobj{Title});
 		# UNFINISHED 
@@ -640,7 +616,7 @@ sub generate_import_table
 				<td align="center" class="tg-yw4l">' . $lox_statsobject{$statsobj}{MinVal} . '<input type="hidden" name="minval_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MinVal} . '"></td>
 				<td align="center" class="tg-yw4l">' . $lox_statsobject{$statsobj}{MaxVal} . '<input type="hidden" name="maxval_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MaxVal} . '"></td>
 				<td align="center" class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Unit}) . '<input type="hidden" name="unit_' . $table_linecount . '" value="' . encode_entities($lox_statsobject{$statsobj}{Unit}) . '"></td>
-				<td class="tg-yw4l">' . $statdef_dropdown . '<input type="hidden" name="statdef_' . $table_linecount . '" value="' . $statdef . '"></td>
+				<td class="tg-yw4l">' . $statdef_dropdown . '</td>
 				<td align="center" class="tg-yw4l"> 
 				<input data-mini="true" type="checkbox" name="doimport_' . $table_linecount . '" value="import">
 				<input type="hidden" name="msnr_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MSNr} . '">
