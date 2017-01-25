@@ -593,68 +593,77 @@ flock(F,2);
 @lines = <F>;
 close(F);
 
-# Places
-our @places;
-foreach (@lines){
-	s/[\n\r]//g;
-	# Skip comments
-	my $commentchar = substr($_,0,1);
-	if ($commentchar eq "#" || $_ eq "") {
-		next;
-	}
-	@fields = split(/\|/);
-	our $placeselectmenu;
-	$found = 0;
-	foreach (@places) {
-		if ($_ eq @fields[7]) {
-			$found = 1;
+# CF: Only when not in script mode
+if (! $stript) {
+
+	# Places
+	our @places;
+	foreach (@lines){
+		s/[\n\r]//g;
+		# Skip comments
+		my $commentchar = substr($_,0,1);
+		if ($commentchar eq "#" || $_ eq "") {
+			next;
+		}
+		@fields = split(/\|/);
+		our $placeselectmenu;
+		$found = 0;
+		foreach (@places) {
+			if ($_ eq @fields[7]) {
+				$found = 1;
+			}
+		}
+		if (!$found) {
+			push (@places,"@fields[7]");
 		}
 	}
-	if (!$found) {
-		push (@places,"@fields[7]");
-	}
-}
 
-# Sorting and creating select list
-my @placessorted = sort { lc($a) cmp lc($b) } @places;
-foreach (@placessorted){
-	if ( $_ eq $place ) {
-		$placeselectmenu .= "<option value='$_' selected=selected>$_</option>";
-	} else {
-		$placeselectmenu .= "<option value='$_'>$_</option>";
-	}
-}
-
-# Categories
-our @categories;
-foreach (@lines){
-	s/[\n\r]//g;
-	# Skip comments
-	my $commentchar = substr($_,0,1);
-	if ($commentchar eq "#" || $_ eq "") {
-		next;
-	}
-	@fields = split(/\|/);
-	our $categoryselectmenu;
-	$found = 0;
-	foreach (@categories) {
-		if ($_ eq @fields[8]) {
-			$found = 1;
+	# Sorting and creating select list
+	my @placessorted = sort { lc($a) cmp lc($b) } @places;
+	foreach (@placessorted){
+		if ( $_ eq $place ) {
+			$placeselectmenu .= "<option value='$_' selected=selected>$_</option>";
+		} else {
+			$placeselectmenu .= "<option value='$_'>$_</option>";
 		}
 	}
-	if (!$found) {
-		push (@categories,"@fields[8]");
-	}
 }
 
-# Sorting and creating select list
-my @categoriessorted = sort { lc($a) cmp lc($b) } @categories;
-foreach (@categoriessorted){
-	if ( $_ eq $category ) {
-		$categoryselectmenu .= "<option value='$_' selected=selected>$_</option>";
-	} else {
-		$categoryselectmenu .= "<option value='$_'>$_</option>";
+# CF: Only when not in script mode
+if (! $script) {
+
+	# Categories
+	our @categories;
+	foreach (@lines){
+		s/[\n\r]//g;
+		# Skip comments
+		my $commentchar = substr($_,0,1);
+		if ($commentchar eq "#" || $_ eq "") {
+			next;
+		}
+		@fields = split(/\|/);
+		our $categoryselectmenu;
+		$found = 0;
+		foreach (@categories) {
+			if ($_ eq @fields[8]) {
+				$found = 1;
+			}
+		}
+		if (!$found) {
+			push (@categories,"@fields[8]");
+		}
 	}
+
+	# Sorting and creating select list
+	my @categoriessorted = sort { lc($a) cmp lc($b) } @categories;
+	foreach (@categoriessorted){
+		if ( $_ eq $category ) {
+			$categoryselectmenu .= "<option value='$_' selected=selected>$_</option>";
+		} else {
+			$categoryselectmenu .= "<option value='$_'>$_</option>";
+		}
+	}
+
 }
 
 # Filter
@@ -852,6 +861,8 @@ sub save
 		$miniserverport = @fields[1];
 	}
 
+	
+	
 	# Test if Miniserver is reachable - Try 5 times before giving up
 	$loxonenameurlenc = uri_escape( unquotemeta($loxonename) );
 	$url = "http://$miniserveradmin:$miniserverpass\@$miniserverip\:$miniserverport/dev/sps/io/$loxonenameurlenc/all";
