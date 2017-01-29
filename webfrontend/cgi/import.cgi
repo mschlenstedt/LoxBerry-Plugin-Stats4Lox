@@ -21,12 +21,15 @@
 
 use lib './lib';
 use LoxBerry::Stats4Lox;
+use warnings;
+
 
 use CGI;
 use CGI::Carp qw(fatalsToBrowser);
 use CGI qw/:standard/;
 use Config::Simple;
 use Cwd 'abs_path';
+use DateTime;
 use File::Basename;
 use File::HomeDir;
 use File::Path qw(make_path);
@@ -36,11 +39,10 @@ use HTTP::Request;
 #use HTML::Restrict;
 use LWP::UserAgent;
 use POSIX qw(strftime);
+use Socket;
 use String::Escape qw( unquotemeta );
 use Time::HiRes qw/ time sleep /;
-use DateTime;
 use URI::Escape;
-use warnings;
 use XML::LibXML;
 use XML::Simple qw(:strict);
 
@@ -686,8 +688,26 @@ sub readloxplan
 		# Use an multidimensional associative hash to save a table of necessary MS data
 		# key is the Uid
 		$lox_miniserver{$miniserver->{U}}{Title} = $miniserver->{Title};
-		$lox_miniserver{$miniserver->{U}}{IP} = $miniserver->{IntAddr};
 		$lox_miniserver{$miniserver->{U}}{Serial} = $miniserver->{Serial};
+		
+		# IP address can hava a port
+		my ($msxmlip, $msxmlport) = split(/:/, $miniserver->{IntAddr}, 2);
+		if($msxmlip=~/^(\d{1,3}).(\d{1,3}).(\d{1,3}).(\d{1,3})$/ &&(($1<=255 && $2<=255 && $3<=255 &&$4<=255 ))) { 
+			# IP seems valid
+			logger(4, "Found Miniserver $miniserver->{Title} with IP $msxmlip");
+			$lox_miniserver{$miniserver->{U}}{IP} = $msxmlip;
+		} else { 
+			# IP seems not to be an IP - possibly we need a DNS lookup?
+			logger(2, "Found Miniserver $miniserver->{Title} possibly configured with hostname. Querying IP of $msxmlip ...");
+			my $dnsip = inet_ntoa(inet_aton($msxmlip));
+			if ($dnsip) {
+				logger(2, " --> Found Miniserver $miniserver->{Title} and DNS lookup got IP $dnsip ...");
+				$lox_miniserver{$miniserver->{U}}{IP} = $dnsip;
+			} else {
+				logger(1, " --> Could not find an IP for Miniserver $miniserver->{Title}. Giving up this MS. Please check the internal Miniserver IPs in your Loxone Config.");
+				$lox_miniserver{$miniserver->{U}}{IP} = $msxmlip;
+			}
+		}
 		# In a later stage, we have to query the LoxBerry MS Database by IP to get LoxBerrys MS-ID.
 	}
 
