@@ -31,6 +31,8 @@ use Getopt::Long;
 use Config::Simple;
 use File::HomeDir;
 use Cwd 'abs_path';
+use RRDs;
+use POSIX qw(ceil);
 
 ##########################################################################
 # Read Settings
@@ -175,12 +177,39 @@ foreach (@data){
 	# Filter units
 	$value = $xml->{value};
 	$value =~ s/^([\d\.]+).*/$1/g;
+	
+	# Get RRD infos
+	$rrdfile = "$installfolder/data/plugins/$psubfolder/databases/@fields[0].rrd";
+	my $rrdinfo = RRDs::info ($rrdfile);
+	my $ERR=RRDs::error;
+	if ($ERR) {
+		$logmessage = "<FAIL> Could not evaluate RRD counter type.";
+		&error;
+		next;
+	}
+
+	# Get Datasource type (GAUGE, COUNTER ...)
+	my $rrd_dstype = %$rrdinfo{'ds[value].type'};
+	if (! $rrd_dstype) {
+		# if the default datasource is not found, let's do fuzzy search
+		foreach my $key (sort keys %$rrdinfo){
+			if (index($key, ".type") != -1) {
+				$rrd_dstype = $$hash{$key}; 
+				last;
+			}	
+		}
+	}
+	# With these DS types only INTEGERs are allowed
+	if ($rrd_dstype eq 'COUNTER' || $rrd_dstype eq 'DERIVE' || $rrd_dstype eq 'ABSOLUTE') { 
+		$value = ceil($value);
+	}
+
 	if (-S "/var/run/rrdcached.sock") {
-		$output = qx(/usr/bin/rrdtool update -d /var/run/rrdcached.sock $installfolder/data/plugins/$psubfolder/databases/@fields[0].rrd N:$value);
+		$output = qx(/usr/bin/rrdtool update -d /var/run/rrdcached.sock $rrdfile N:$value);
 	} else {
 		$logmessage = "<WARN> RRDCaching Daemon (rrdcached) seems not to run. Writing values directly to disc."; 
 		&log;
-		$output = qx(/usr/bin/rrdtool update $installfolder/data/plugins/$psubfolder/databases/@fields[0].rrd N:$value);
+		$output = qx(/usr/bin/rrdtool update $rrdfile N:$value);
 	}
 	if ($? eq 0) {
 		$logmessage = "<OK> Value for Statistic ID @fields[0] (@fields[3]) is: $value"; 
