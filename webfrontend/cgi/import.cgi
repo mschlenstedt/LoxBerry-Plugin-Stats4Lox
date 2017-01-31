@@ -88,7 +88,7 @@ our %StatTypes = ( 	1, "Jede Änderung (max. ein Wert pro Minute)",
 ##########################################################################
 
 # Version of this script
-$version = "0.1.3";
+$version = "0.1.4";
 
 # Figure out in which subfolder we are installed
 our $psubfolder = abs_path($0);
@@ -319,27 +319,11 @@ sub save
 	
 	for (my $line = 1; $line <= $form_linenumbers; $line++) {
 		logger(4, "Line " . $line . ": UID " . param("loxuid_" . $line));
-		if ( param("doimport_$line") ne 'import' ) {
+		my $importtype = param("doimport_$line");
+		if (($importtype ne 'import') && ($importtype ne 'import_start' )) {
 				next;
 		}
 		logger(4, "IMPORT Line " . $line . ": UID " . param("loxuid_$line"));
-		
-		# Call Michaels addstat.cgi by URL to create RRD archive
-		# #With commandline, URI-encoding not necessary anymore - hopefully (everything UTF-8)
-		# my $loxonename = uri_escape( param("title_$line") );
-		# my $loxuid = param("loxuid_$line");
-		# my $statstype = param("statstype_$line");
-		# my $description = uri_escape( param("desc_$line") . " (" . $loxuid . ")" );
-		# # settings need some code to get dbsettings.datfrom Michael
-		# my $settings = "";
-		# my $minval = param("minval_$line");
-		# my $maxval = param("maxval_$line");
-		# my $place = uri_escape( param("place_$line") );
-		# my $category = uri_escape( param("category_$line") );
-		# my $stat_ms = param("msnr_$line");
-		# my $unit = uri_escape( param("unit_$line"));
-		## URI-Escape has to be undone when writing the job!
-		
 
 		# Call Michaels addstat.cgi by URL to create RRD archive
 		my $loxonename = param("title_$line");
@@ -355,46 +339,10 @@ sub save
 		my $unit = param("unit_$line");
 		my $loxtype = param("type_$line");
 
-
 		# Check if loxonename already exists in databases list
 		if (! defined $databases_by_name{lc($loxonename)}) {
-		# # Michael is changing the addstat interface from web call to local execution
-			# # HTTP Request
-# #			my $statfullurl = $addstat_urlbase . "?script=1&loxonename=$loxonename&description=$description&settings=$settings&miniserver=$stat_ms&min=$minval&max=$maxval&place=$place&category=$category&uid=$loxuid";
-# #			logger(4, "addstat URL " . $statfullurl);
-
-			# my $ua = LWP::UserAgent->new;
-			# my $resp = $ua->get($statfullurl);
-			# if ($resp->is_success) {
-				# my $message = $resp->decoded_content;
-				# logger (3, "Successful addstat http request");
-				# logger (4, "HTTP reply: " . $message);
-				
-				# # Format addstat response to get useful output
-				# my @stat_message = split /\+/, $message;
-				# logger(4, "Resp_Status: $stat_message[3] Resp_Text $stat_message[6] Resp_DBID $stat_message[9]");
-				# my $resp_status = $stat_message[3];
-				# my $resp_message = $stat_message[6];
-				# $resp_dbnr = $stat_message[9];
-				# if ($resp_status eq "OK" && $resp_dbnr > 0) {
-					# logger(3, "addstat - RRD successfully created with DB-Nr $resp_dbnr");
-				# # Addstat successfully called 
-				# } else {
-				# # Addstat running but failed
-				# logger(2, "addstat not successfully. Returned $resp_status - $resp_message");
-				# }
-			# } else {
-			# # Addstat URL Call failed
-			# logger(1, "Calling addstat URL returns an error:");
-			# logger(1, "HTTP GET error: " . $resp->code . " " . $resp->message);
-			# }	
-		# } else { $resp_dbnr = $db_duplicate_exists; }
 		
-			
-			#
 			# Call addstat by commandline
-			#
-			
 			# Example from Michael
 			# ./addstat.cgi 
 			# --script 
@@ -409,7 +357,6 @@ sub save
 			# --uid "289c2d05a8-8602-11e3-89cfb70a5529d684" 
 			# --unit "%"
 			# --block "Virtual Status" 
-			
 		
 			my $commandline_options = 
 			"--script " .
@@ -477,6 +424,10 @@ sub save
 				$job->param("Last status",	"Scheduled");
 				$job->param("try",			"1");
 				$job->param("maxtries",		"5");
+				$job->param("importtype",	$importtype);
+				
+				
+				
 				$job->write("$job_basepath/$loxuid.job") or logger (1, "Could not create job file for $loxonename with DB number $resp_dbnr");
 				undef $job;
 			} else { 
@@ -620,7 +571,15 @@ sub generate_import_table
 				<td align="center" class="tg-yw4l">' . encode_entities($lox_statsobject{$statsobj}{Unit}) . '<input type="hidden" name="unit_' . $table_linecount . '" value="' . encode_entities($lox_statsobject{$statsobj}{Unit}) . '"></td>
 				<td class="tg-yw4l">' . $statdef_dropdown . '</td>
 				<td align="center" class="tg-yw4l"> 
-				<input data-mini="true" type="checkbox" name="doimport_' . $table_linecount . '" value="import">
+					<!--<input data-mini="true" type="checkbox" name="doimport_' . $table_linecount . '" value="import"> -->
+					<!-- <select data-mini="true" name="doimport_' . $table_linecount . '">
+						<option selected value="">Inaktiv</option>
+						<option value="import">Import & Start</option>
+						<option value="import_start">Nur Import</option>
+					</select> -->
+					<label data-mini="true" for="imptype_import' . $table_linecount . '"><input data-mini="true" type="checkbox" id="imptype_import' . $table_linecount . '" name="doimport_' . $table_linecount . '" value="import">Import</label>
+					<label data-mini="true" for="imptype_importstart' . $table_linecount . '"><input data-mini="true" type="checkbox" id="imptype_importstart' . $table_linecount . '"name="doimport_' . $table_linecount . '" value="import_start">Import & Start</label>
+			
 				<input type="hidden" name="msnr_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MSNr} . '">
 				<input type="hidden" name="msip_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{MSIP} . '">
 				<input type="hidden" name="type_' . $table_linecount . '" value="' . $lox_statsobject{$statsobj}{Type} . '">
@@ -696,6 +655,9 @@ sub readloxplan
 			# IP seems valid
 			logger(4, "Found Miniserver $miniserver->{Title} with IP $msxmlip");
 			$lox_miniserver{$miniserver->{U}}{IP} = $msxmlip;
+		} elsif ((! defined $msxmlip) || ($msxmlip eq "")) {
+			logger(1, "Miniserver $miniserver->{Title}: Internal IP is empty. This field is mandatory. Please update your Config.");
+			$lox_miniserver{$miniserver->{U}}{IP} = undef;
 		} else { 
 			# IP seems not to be an IP - possibly we need a DNS lookup?
 			logger(2, "Found Miniserver $miniserver->{Title} possibly configured with hostname. Querying IP of $msxmlip ...");
