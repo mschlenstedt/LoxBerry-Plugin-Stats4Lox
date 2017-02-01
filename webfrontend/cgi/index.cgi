@@ -23,6 +23,7 @@ use CGI::Carp qw(fatalsToBrowser);
 use CGI qw/:standard/;
 use Config::Simple;
 use File::HomeDir;
+use File::Copy;
 use Cwd 'abs_path';
 #use warnings;
 #use strict;
@@ -145,6 +146,11 @@ elsif ($do eq "pause") {
 # Start grepping data
 elsif ($do eq "play") {
   &play;
+}
+
+# Delete a statistic
+elsif ($do eq "delete") {
+  &delete;
 }
 
 else {
@@ -284,6 +290,56 @@ close (F);
 &form;
 
 exit;
+
+}
+
+#####################################################
+# Delete a statistic
+#####################################################
+
+sub delete {
+
+	my $newfilecontent;
+	
+	if (!$db) {
+		error();
+		exit;
+	}
+
+	# Read
+	open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could not open databases.dat: $!";
+	flock(F, 2);
+	@data = <F>;
+	foreach (@data){
+		s/[\n\r]//g;
+		# Comments
+		if ($_ =~ /^\s*#.*/) {
+		  $newfilecontent .= $_ . "\n";
+		  next;
+		}
+		@fields = split(/\|/);
+		if (@fields[0] ne $db) {
+				$newfilecontent .= $_ . "\n";
+				next;
+		}
+		# Move files to /tmp - /tmp usually is cleared on reboot
+		move ("$installfolder/data/plugins/$psubfolder/databases/@fields[0].status", "/tmp/");
+		move ("$installfolder/data/plugins/$psubfolder/databases/@fields[0].info", "/tmp/");
+		move ("$installfolder/data/plugins/$psubfolder/databases/@fields[0].rrd", "/tmp/");
+	}
+	# Create backups of databases.dat every delete
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
+	my $nowstring = sprintf("%04d%02d%02d-%02d%02d%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec);
+	copy("$installfolder/config/plugins/$psubfolder/databases.dat", "/tmp/databases.$nowstring.back");
+	close(F);
+	# Write new file
+	open(F,">$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could not open databases.dat: $!";
+	flock(F, 2);
+	print F $newfilecontent;
+	close (F);
+	&form;
+
+	exit;
 
 }
 

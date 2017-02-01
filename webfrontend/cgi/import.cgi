@@ -540,7 +540,9 @@ sub generate_import_table
 		my $statdef_nr = 0;
 		foreach my $statdef (sort keys %dbsettings) {
 			$statdef_nr++;
-			if ($statdef_nr == 1) {
+		# Preselect Nr. 2 (Energy-Definition) if Loxone-Stat is "Energy", else Nr. 1
+		if ((($statdef_nr == 1) && ($lox_statsobject{$statsobj}{Type} ne "Energy")) || 
+				(($statdef_nr == 2) && ($lox_statsobject{$statsobj}{Type} eq "Energy"))) {
 				$statdef_dropdown .= "<option selected value=\"$statdef_nr\">$dbsettings{$statdef}{Name}</option>\n";
 			} else {
 				$statdef_dropdown .= "<option value=\"$statdef_nr\">$dbsettings{$statdef}{Name}</option>\n";

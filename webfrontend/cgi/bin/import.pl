@@ -312,8 +312,31 @@ if ($ERR) {
 } else {
 	our $lastupdate_ep = $$rrdinfo{'last_update'};
 	our $rrd_step = $$rrdinfo{'step'};
+	# Get Datasource type (GAUGE, COUNTER ...)
+	our $rrd_dstype = %$rrdinfo{'ds[value].type'};
+	if (! $rrd_dstype) {
+		# if the default datasource is not found, let's do fuzzy search
+		foreach my $key (sort keys %$rrdinfo){
+			# print "$key = $$hash{$key}\n";
+			if (index($key, ".type") != -1) {
+				$rrd_dstype = $$hash{$key}; 
+				last;
+			}		
+		}
+	}
 }
+
 logger(4, "RRD lastupdate (epoch): $lastupdate_ep , Stepsize $rrd_step seconds.");
+
+our $rrd_useint;
+if ($rrd_dstype eq 'COUNTER' || $rrd_dstype eq 'DERIVE' || $rrd_dstype eq 'ABSOLUTE') { 
+	$rrd_useint = 1;
+	logger(4, "RRD Datasource type is $rrd_dstype. Values will be rounded to INTEGER.");
+} else {
+	$rrd_useint = undef;
+	logger(4, "RRD Datasource type is $rrd_dstype. Values are used as they are - FLOAT.");
+}
+
 
 # If timestamp is earlier then 0 of Loxone-time, set it to Loxone-time 0 == 1230768000 Epoch
 if ($lastupdate_ep < 1230768000) {
@@ -465,11 +488,19 @@ for (my $year=$lastupdate_year; $year <= $now->year; $year++) {
 			}
 			
 			$data_counter++;
-			#logger(4, "   --> Datapoint Date/Time $data->{T} Epoch: " . $data_time->epoch . " Value: $data->{V}"); # Many logs
-			push (@data_value_array, $data_time->epoch . ':' . $data->{V});
+			# logger(4, "   --> Datapoint Date/Time $data->{T} Epoch: " . $data_time->epoch . " Value: $data->{V}"); # Many logs
+			
+			# If INT has to be used, round to INT, otherwise do not modify values
+			if (! $rrd_useint) {
+				# FLOAT
+				push (@data_value_array, $data_time->epoch . ':' . $data->{V});
+			} else {
+				# INT (use POSIX ceil to avoid installing Math::Round)
+				push (@data_value_array, $data_time->epoch . ':' . ceil($data->{V}));
+			}
 			
 			# For every x datapoints update RRD
-			if ($data_counter%2000 == 0) {
+			if ($data_counter%1000 == 0) {
 				rrdupdate();
 			}	
 		}
