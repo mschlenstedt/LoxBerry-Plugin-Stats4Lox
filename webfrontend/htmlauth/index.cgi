@@ -185,7 +185,7 @@ open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
     @fields = split(/\|/);
     my $dbname = $fields[0];
     my $status;
-	open(F,"<$installfolder/data/plugins/$psubfolder/databases/$dbname.status");
+	open(F,"<" . $CFG::MAIN_RRDFOLDER . "/$dbname.status");
       $status = <F>;
     close(F);
     $ptablerows = $ptablerows . "<tr><th style='vertical-align:middle'>$i</th><td style='vertical-align:middle'>$fields[2]</td><td style='vertical-align:middle'>$fields[3]</td><td style='text-align:center; vertical-align:middle'>$fields[4]</td>";
@@ -246,7 +246,7 @@ open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could
     }
     @fields = split(/\|/);
     if ($fields[0] eq $db || $db eq "all") {
-	open(F1,">$installfolder/data/plugins/$psubfolder/databases/$fields[0].status");
+	open(F1,">" . $CFG::MAIN_RRDFOLDER . "/$fields[0].status");
 	flock(F1, 2);
 	print F1 "1";
 	close(F1);
@@ -281,7 +281,7 @@ open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could
     }
     @fields = split(/\|/);
     if ($fields[0] eq $db || $db eq "all") {
-	open(F1,">$installfolder/data/plugins/$psubfolder/databases/$fields[0].status");
+	open(F1,">" . $CFG::MAIN_RRDFOLDER . "/$fields[0].status");
 	flock(F1, 2);
 	print F1 "2";
 	close(F1);
@@ -325,9 +325,9 @@ sub delete {
 				next;
 		}
 		# Move files to /tmp - /tmp usually is cleared on reboot
-		move ("$installfolder/data/plugins/$psubfolder/databases/$fields[0].status", "/tmp/");
-		move ("$installfolder/data/plugins/$psubfolder/databases/$fields[0].info", "/tmp/");
-		move ("$installfolder/data/plugins/$psubfolder/databases/$fields[0].rrd", "/tmp/");
+		move ($CFG::MAIN_RRDFOLDER . "/$fields[0].status", "/tmp/");
+		move ($CFG::MAIN_RRDFOLDER . "/$fields[0].info", "/tmp/");
+		move ($CFG::MAIN_RRDFOLDER . "/$fields[0].rrd", "/tmp/");
 	}
 	# Create backups of databases.dat every delete
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);

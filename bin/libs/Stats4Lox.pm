@@ -28,8 +28,7 @@ if ($pcfg->param('Main.rrdfolder') and ! -e $pcfg->param('Main.rrdfolder')) {
 }
 if (! $pcfg->param('Main.rrdfolder')) {
 	# Not configured at all --> set default
-	$rrdfolder = "$LoxBerry::System::lbpdatadir/databases";
-	$pcfg->param('Main.rrdfolder', $rrdfolder);
+	$pcfg->param('Main.rrdfolder', "$LoxBerry::System::lbpdatadir/databases");
 }
 
 if (! $pcfg->param('Main.configfolder') or ! -e $pcfg->param('Main.configfolder')) {

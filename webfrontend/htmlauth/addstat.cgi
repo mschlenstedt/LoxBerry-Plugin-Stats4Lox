@@ -19,6 +19,9 @@
 # Modules
 ##########################################################################
 
+use LoxBerry::System;
+require "$lbpbindir/libs/Stats4Lox.pm";
+
 use CGI::Carp qw(fatalsToBrowser);
 use CGI qw/:standard/;
 use LWP::UserAgent;
@@ -959,7 +962,7 @@ sub save
 	until ($i == 1) {
 		$lastid++;
 		our $dbfilename = sprintf("%04d", $lastid);
-		if (!-e "$installfolder/data/plugins/$psubfolder/databases/$dbfilename.rrd") {
+		if (!-e $CFG::MAIN_RRDFOLDER . "/$dbfilename.rrd") {
 			$i = 1;
 			open(F,">$installfolder/config/plugins/$psubfolder/id_databases.dat") or die "Cannot open id_databases.dat: $!";
 				flock(F, 2);
@@ -970,7 +973,7 @@ sub save
 
 	# For custom RRD creation
 	if ($dbsettings eq "custom") {
-		our $command = "$installfolder/data/plugins/$psubfolder/databases/$dbfilename.rrd --start $start --step $step DS:value:$dsname:$heartbeat:$min:$max ";
+		our $command = $CFG::MAIN_RRDFOLDER. "/$dbfilename.rrd --start $start --step $step DS:value:$dsname:$heartbeat:$min:$max ";
 		if ($savedbsettings) {
 			our $linesavedbsettings = "$savedbsettingsname|$start|$step|$dsname|$heartbeat|$min|$max|$rracount|";
 		}
@@ -985,7 +988,7 @@ sub save
 
 	# Standards - see suggestions from https://www.loxforum.com/forum/german/software-konfiguration-programm-und-visualisierung/61081-loxberry-statistik-plugin-diskussion?p=61470#post61470
 	} else {
-		our $command = "$installfolder/data/plugins/$psubfolder/databases/$dbfilename.rrd --start 1230768000 --step 300 DS:value:GAUGE:3900:$min:$max ";
+		our $command = $CFG::MAIN_RRDFOLDER . "/$dbfilename.rrd --start 1230768000 --step 300 DS:value:GAUGE:3900:$min:$max ";
 		$command = $command . "RRA:AVERAGE:0.08:1:8928 ";
 		$command = $command . "RRA:AVERAGE:0.08:3:8832 ";
 		$command = $command . "RRA:AVERAGE:0.08:12:8760 ";
@@ -1002,7 +1005,7 @@ sub save
 
 	$command = unquotemeta($command);
 	$output = qx(/usr/bin/rrdtool create $command 2>&1);
-	if ( $? > 0 || !-e "$installfolder/data/plugins/$psubfolder/databases/$dbfilename.rrd" ) {
+	if ( $? > 0 || !-e $CFG::MAIN_RRDFOLDER . "/$dbfilename.rrd" ) {
 		$error = $pphrase->param("TXT0010") . " " . $pphrase->param("TXT0011") . "<br><br><textarea name='textarea1' id='textarea1' readonly>" . $output . "</textarea><br><br>" . $pphrase->param("TXT0012") . "<br><br><textarea name='textarea2' id='textarea2' readonly>" . "/usr/bin/rrdtool create " . $command . "</textarea>";
 		&error;
 	}
@@ -1022,17 +1025,17 @@ sub save
 	close(F);
 
 	# Create status file
-	open(F,">$installfolder/data/plugins/$psubfolder/databases/$dbfilename.status") || die "Cannot open status file for RRD-database.";
+	open(F,">" . $CFG::MAIN_RRDFOLDER . "/$dbfilename.status") || die "Cannot open status file for RRD-database.";
 	flock(F, 2);
 	print F "1";
 	close(F);
 
 	# Create info file
-	open(F,">$installfolder/data/plugins/$psubfolder/databases/$dbfilename.info") || die "Cannot open info file for RRD-database.";
+	open(F,">" . $CFG::MAIN_RRDFOLDER . "/$dbfilename.info") || die "Cannot open info file for RRD-database.";
 	flock(F, 2);
 	print F "http://USERNAME:PASSWORD\@$miniserverip:$miniserverport/dev/sps/io/$loxonenameurlenc/astate\n\n";
 	print F "/usr/bin/rrdtool create $command 2>&1\n\n";
-	$output = qx(/usr/bin/rrdinfo $installfolder/data/plugins/$psubfolder/databases/$dbfilename.rrd 2>&1);
+	$output = qx(/usr/bin/rrdinfo $CFG::MAIN_RRDFOLDER/$dbfilename.rrd 2>&1);
 	print F $output;
 	close(F);
 

@@ -20,8 +20,8 @@
 ##########################################################################
 
 use LoxBerry::System;
-use LoxBerry::Web;
 require "$lbpbindir/libs/Stats4Lox.pm";
+use LoxBerry::Web;
 use warnings;
 
 

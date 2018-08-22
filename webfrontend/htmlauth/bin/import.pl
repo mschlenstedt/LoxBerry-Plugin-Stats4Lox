@@ -53,6 +53,9 @@
 # Modules
 ##########################################################################
 
+use LoxBerry::System;
+require "$lbpbindir/libs/Stats4Lox.pm";
+
 use LWP::UserAgent;
 use String::Escape qw( unquotemeta );
 use URI::Escape;
@@ -266,7 +269,7 @@ if ($job_loglevel)		{ $loglevel = $job_loglevel; }
 # Some RRD file processing 
 ##############################
 
-our $rrdfile = "$installfolder/data/plugins/$psubfolder/databases/$db_nr.rrd";
+our $rrdfile = "$CFG::MAIN_RRDFOLDER/$db_nr.rrd";
 if (! -e $rrdfile) {
 	logger(1, "RRD-File $rrdfile does not exist - Terminating");
 	exit(7);
@@ -542,7 +545,7 @@ $job->write();
 # If job requests to immediately start live polling
 if ($importtype eq 'import_start') {
 	logger(3, "=== Start live polling requested ===");
-	if (open(F,">$installfolder/data/plugins/$psubfolder/databases/$db_nr.status")) {
+	if (open(F,">$CFG::MAIN_RRDFOLDER/$db_nr.status")) {
 		flock(F, 2);
 		print F "2";
 		close F;

@@ -19,6 +19,9 @@
 # Modules
 ##########################################################################
 
+use LoxBerry::System;
+require "$lbpbindir/libs/Stats4Lox.pm";
+
 use CGI::Carp qw(fatalsToBrowser);
 use CGI qw/:standard/;
 use Config::Simple;
@@ -132,9 +135,9 @@ open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
     @fields = split(/\|/);
     if (@fields[0] eq $db) {
       if (-S "/var/run/rrdcached.sock") {
-        $output = qx(/usr/bin/rrdtool graph $installfolder/webfrontend/html/plugins/$psubfolder/charts/@fields[0].png -E -Y -z -d /var/run/rrdcached.sock -w 600 -h 300 --start -24h --end now --title \"@fields[2]\" DEF:value=$installfolder/data/plugins/$psubfolder/databases/@fields[0].rrd:value:AVERAGE LINE1:value#ff0000:\"Value AVG\");
+        $output = qx(/usr/bin/rrdtool graph $installfolder/webfrontend/html/plugins/$psubfolder/charts/@fields[0].png -E -Y -z -d /var/run/rrdcached.sock -w 600 -h 300 --start -24h --end now --title \"@fields[2]\" DEF:value=$CFG::MAIN_RRDFOLDER/@fields[0].rrd:value:AVERAGE LINE1:value#ff0000:\"Value AVG\");
       } else {
-        $output = qx(/usr/bin/rrdtool graph $installfolder/webfrontend/html/plugins/$psubfolder/charts/@fields[0].png -E -Y -z -w 600 -h 300 --start -24h --end now --title \"@fields[2]\" DEF:value=$installfolder/data/plugins/$psubfolder/databases/@fields[0].rrd:value:AVERAGE LINE1:value#ff0000:\"Value AVG\");
+        $output = qx(/usr/bin/rrdtool graph $installfolder/webfrontend/html/plugins/$psubfolder/charts/@fields[0].png -E -Y -z -w 600 -h 300 --start -24h --end now --title \"@fields[2]\" DEF:value=$CFG::MAIN_RRDFOLDER/@fields[0].rrd:value:AVERAGE LINE1:value#ff0000:\"Value AVG\");
       }
     }
   }

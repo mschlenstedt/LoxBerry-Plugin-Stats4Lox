@@ -19,6 +19,9 @@
 # Modules
 ##########################################################################
 
+use LoxBerry::System;
+require "$lbpbindir/libs/Stats4Lox.pm";
+
 use CGI::Carp qw(fatalsToBrowser);
 use CGI qw/:standard/;
 use Config::Simple;
@@ -131,7 +134,7 @@ open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
     }
     @fields = split(/\|/);
     if (@fields[0] eq $db) {
-      $dbinfo = qx(/usr/bin/rrdinfo $installfolder/data/plugins/$psubfolder/databases/@fields[0].rrd);
+      $dbinfo = qx(/usr/bin/rrdinfo $CFG::MAIN_RRDFOLDER/@fields[0].rrd);
       $dbinfo =~ s/\n/<br>/g;
     }
   }

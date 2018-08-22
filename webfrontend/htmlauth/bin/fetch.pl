@@ -23,6 +23,11 @@
 # Modules
 ##########################################################################
 
+use LoxBerry::System;
+require "$lbpbindir/libs/Stats4Lox.pm";
+
+
+
 use LWP::UserAgent;
 use String::Escape qw( unquotemeta );
 use URI::Escape;
@@ -111,7 +116,7 @@ foreach (@data){
 	}
 
 	# Skip paused databases
-	open(F,"<$installfolder/data/plugins/$psubfolder/databases/@fields[0].status") || die "Cannot open status file for RRD-database.";
+	open(F,"<" . $CFG::MAIN_RRDFOLDER . "/@fields[0].status") || die "Cannot open status file for RRD-database.";
 	$status = <F>;
         print "Status: $status\n";
 	if ($status eq 1) {
@@ -179,7 +184,7 @@ foreach (@data){
 	$value =~ s/^([\d\.]+).*/$1/g;
 	
 	# Get RRD infos
-	$rrdfile = "$installfolder/data/plugins/$psubfolder/databases/@fields[0].rrd";
+	$rrdfile = $CFG::MAIN_RRDFOLDER. "/@fields[0].rrd";
 	my $rrdinfo = RRDs::info ($rrdfile);
 	my $ERR=RRDs::error;
 	if ($ERR) {
@@ -219,7 +224,7 @@ foreach (@data){
 	# Reset status if needed (from red to green)
 	if ($status eq 0) {
                 print "Status was 0. Updating...\n";
-		open(F,">$installfolder/data/plugins/$psubfolder/databases/@fields[0].status") || die "Cannot open status file for RRD-database.";
+		open(F,">" . $CFG::MAIN_RRDFOLDER . "/@fields[0].status") || die "Cannot open status file for RRD-database.";
 		flock(F,2);
 		print F "2";
 		close F;
@@ -266,7 +271,7 @@ sub error {
   &log;
 
   # Update database
-  open(F,">$installfolder/data/plugins/$psubfolder/databases/$db.status");
+  open(F,">" . $CFG::MAIN_RRDFOLDER . "/$db.status");
   flock(F, 2);
   print F "0";
   close(F);
