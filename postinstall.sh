@@ -48,21 +48,17 @@ ARGV5=$5 # Fifth argument is Base folder of LoxBerry
 /bin/sed -i "s:REPLACEFOLDERNAME:$ARGV3:g" $ARGV5/system/cron/cron.daily/$ARGV2
 /bin/sed -i "s:REPLACEINSTALLFOLDER:$ARGV5:g" $ARGV5/system/cron/cron.daily/$ARGV2
 
-if [ ! -d "$ARGV5/data/plugins/$ARGV3/databases" ]; then
-  mkdir "$ARGV5/data/plugins/$ARGV3/databases"
+echo "<INFO> Reading configuration"
+. $LBHOMEDIR/libs/bashlib/iniparser.sh
+iniparser $ARGV5/config/plugins/$ARGV3/stats4lox.cfg "Main"
+
+if [ ! -d "$Mainrrdfolder" ]; then
+  mkdir "$Mainrrdfolder"
 fi
+
+## CF 0.3.1: Not sure if still required in LB1.0 ?
 # Link databases to HTML directory to have access from Client JavaScript
-ln -s "$ARGV5/data/plugins/$ARGV3/databases" "$ARGV5/webfrontend/html/plugins/$ARGV3/databases"
+ln -s "$Mainrrdfolder" "$ARGV5/webfrontend/html/plugins/$ARGV3/databases"
   
-if [ ! -f REPLACEINSTALLFOLDER/log/plugins/REPLACEFOLDERNAME/stats4lox.log ]; then
-  ln -s /run/shm/$ARGV3/stats4lox.log $ARGV5/log/plugins/$ARGV3/stats4lox.log
-fi
-
-echo "**********************************************************"
-echo "*     Please reboot your LoxBerry after installation     *"
-echo "* Bitte starte Deinen LoxBerry neu nach der Installation *"
-echo "**********************************************************"
-
-
 # Exit with Status 0
 exit 0
