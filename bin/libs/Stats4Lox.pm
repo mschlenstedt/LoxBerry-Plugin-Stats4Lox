@@ -1,14 +1,48 @@
+use LoxBerry::System;
 use strict;
-use File::HomeDir;
-use Cwd 'abs_path';
-use Carp;
 
-package LoxBerry::Stats4Lox;
+package Stats4Lox;
 
 my %dbsettings;
-my $installfolder = File::HomeDir->my_home;
-my $psubfolder = Cwd::abs_path($0);
-$psubfolder =~ s/(.*)\/(.*)\/(.*)$/$2/g;
+my $installfolder = $LoxBerry::System::lbhomedir;
+my $psubfolder = $LoxBerry::System::lbpplugindir;
+
+## Routines to run on every inclusion
+#####################################
+
+our $pcfgfile = "$LoxBerry::System::lbpconfigdir/stats4lox.cfg";
+our $pcfg;
+
+if (! -e $pcfgfile) {
+		$pcfg = new Config::Simple(syntax=>'ini');
+		$pcfg->param("Main.ConfigVersion", "1");
+		$pcfg->write($pcfgfile);
+	}
+$pcfg = new Config::Simple($pcfgfile);
+$pcfg->autosave(1);
+
+# RRD Database folder
+our $rrdfolder;
+if ($pcfg->param('Main.rrdfolder') and ! -e $pcfg->param('Main.rrdfolder')) {
+	# Configured but does not exists
+	undef $rrdfolder;
+}
+if (! $pcfg->param('Main.rrdfolder')) {
+	# Not configured
+	$rrdfolder = "$LoxBerry::System::lbpdatadir/databases";
+	$pcfg->param('Main.rrdfolder', $rrdfolder);
+}
+
+# Finally import to CFG namespace
+$pcfg->import_names('CFG');
+# Access config variables by $CFG::Main_rrdfolder
+
+######################################
+## Functions to run on demand
+
+
+
+
 
 use base 'Exporter';
 #our @EXPORT = (
@@ -22,15 +56,15 @@ sub get_dbsettings
 {
 	if (! %dbsettings) {
 		open(F,"<$installfolder/config/plugins/$psubfolder/dbsettings.dat");
-			my @data = <F>;
-			foreach (@data) {
-				s/[\n\r]//g;
-				# Comments
-				if ($_ =~ /^\s*#.*/) {
-						next;
-				}
-				my @fields = split(/\|/);
-				if ($fields[0]) { 
+        my @data = <F>;
+        foreach (@data) {
+            s/[\n\r]//g;
+            # Comments
+            if ($_ =~ /^\s*#.*/) {
+                next;
+            }
+            my @fields = split(/\|/);
+            if ($fields[0]) { 
 				$dbsettings{$fields[0]}{Name} = $fields[1];
 			}
 		}
@@ -45,8 +79,8 @@ sub get_dbsettings
 #####################################################
 #
 # Usage: 
-# 	Use LoxBerry::Stats4Lox;
-# 	my %dbs = LoxBerry::Stats4Lox::get_databases_by_name();
+# 	require "$lbpbindir/libs/Stats4Lox.pm";
+# 	my %dbs = Stats4Lox::get_databases_by_name();
 # 	my $loxonename = "puffertemp";
 #	my $description = %dbs{$loxonename}{Description};
 
@@ -88,8 +122,7 @@ sub get_databases_by_name
 # Create hash of DBs by dbid
 #####################################################
 # Usage: 
-# 	Use LoxBerry::Stats4Lox;
-# 	my %dbs = LoxBerry::Stats4Lox::get_databases_by_id();
+# 	my %dbs = Stats4Lox::get_databases_by_id();
 # 	my $statid = 2;
 #	my $description = %dbs{$statid}{Description};
 
@@ -127,72 +160,7 @@ sub get_databases_by_id
 	return %entries;
 }	 
 
-#####################################################
-# Sort dbsettings.dat by name
-#####################################################
-#
-# Usage: 
-# 	Use LoxBerry::Stats4Lox;
-# 	my $result = LoxBerry::Stats4Lox::sort_dbsettings();
-#	if ($result) { print "OK\n" } else { print "ERROR\n" };
 
-sub sort_dbsettings
-{
-	# Read
-	my @zeilen=();
-	my $result = 1;
-	my $input_file="$installfolder/config/plugins/$psubfolder/dbsettings.dat";
-	open (F, '<', $input_file) or Carp::carp "Could not read dbsettings.dat\n";
-	while(<F>)
-	{
-		 chomp($_ );
-		 push @zeilen, [ split /\|/, $_, 2 ];
-	}
-	close (F);
-	# Error?
-	if ( $! ) { $result = 0};
-
-	# Sort by name
-	@zeilen=sort{$a->[1] cmp $b->[1]}@zeilen;
-
-	# Write sorted dbsettings.dat
-	open (F, '+<', $input_file) or Carp::carp "Could not write dbsettings.dat\n";
-	flock(F, 2);
-	my @data = <F>;
-	seek(F,0,0);
-	truncate(F,0);
-	my $i = 1;
-	foreach (@zeilen) {
-		# Skip Comments
-		if (@{$_}[0] =~ /^\s*#.*/) {
-			print F "@{$_}[0]\n";
-			next;
-		}
-		# Skip old enty for "Standardsettings
-		if (@{$_}[0] eq "1") {
-			next;
-		}
-		if ($i eq "1") {
-			# First dataset is the standard settings
-			my $pphrase;
-			my $settingsname = "Standard";
-			if ( $pphrase->param("TXT0029") ) {
-				my $settingsname = $pphrase->param("TXT0029");
-			}
-			print F "$i|$settingsname\n";
-			$i++;
-		} 
-		# Print dataset
-		print F "$i|@{$_}[1]\n";
-		$i++;
-	}
-	close (F);
-
-	# Error?
-	if ( $! ) { $result = 0};
-
-	return $result;
-}	 
 
 
 #####################################################

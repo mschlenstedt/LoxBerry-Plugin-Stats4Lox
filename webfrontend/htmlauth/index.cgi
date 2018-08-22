@@ -19,15 +19,19 @@
 # Modules
 ##########################################################################
 
-use CGI::Carp qw(fatalsToBrowser);
-use CGI qw/:standard/;
-use Config::Simple;
-use File::HomeDir;
-use File::Copy;
-use Cwd 'abs_path';
-#use warnings;
-#use strict;
-#no strict "refs"; # we need it for template system
+use LoxBerry::System;
+use LoxBerry::Web;
+require "$lbpbindir/libs/Stats4Lox.pm";
+
+#use CGI::Carp qw(fatalsToBrowser);
+#use CGI qw/:standard/;
+#use Config::Simple;
+#use File::HomeDir;
+#use File::Copy;
+#use Cwd 'abs_path';
+use warnings;
+use strict;
+no strict "refs"; # we need it for template system
 
 ##########################################################################
 # Variables
@@ -55,7 +59,7 @@ our $nexturl;
 our @data;
 our @fields;
 our $i;
-our $home = File::HomeDir->my_home;
+our $home = $lbhomedir;
 our $ptablerows;
 our $db;
 
@@ -64,7 +68,7 @@ our $db;
 ##########################################################################
 
 # Version of this script
-$version = "0.0.8";
+$version = "0.3.1.1";
 
 # Figure out in which subfolder we are installed
 our $psubfolder = abs_path($0);
@@ -93,11 +97,8 @@ $do           = $query{'do'};
 $db           = $query{'db'};
 
 # Filter
-quotemeta($query{'lang'});
-quotemeta($do);
-quotemeta($db);
 
-$saveformdata          =~ tr/0-1//cd;
+my $saveformdata          =~ tr/0-1//cd;
 $saveformdata          = substr($saveformdata,0,1);
 $query{'lang'}         =~ tr/a-z//cd;
 $query{'lang'}         =  substr($query{'lang'},0,2);
@@ -182,11 +183,12 @@ open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
       next;
     }
     @fields = split(/\|/);
-    $dbname = @fields[0];
-    open(F,"<$installfolder/data/plugins/$psubfolder/databases/$dbname.status");
+    my $dbname = $fields[0];
+    my $status;
+	open(F,"<$installfolder/data/plugins/$psubfolder/databases/$dbname.status");
       $status = <F>;
     close(F);
-    $ptablerows = $ptablerows . "<tr><th style='vertical-align:middle'>$i</th><td style='vertical-align:middle'>@fields[2]</td><td style='vertical-align:middle'>@fields[3]</td><td style='text-align:center; vertical-align:middle'>@fields[4]</td>";
+    $ptablerows = $ptablerows . "<tr><th style='vertical-align:middle'>$i</th><td style='vertical-align:middle'>$fields[2]</td><td style='vertical-align:middle'>$fields[3]</td><td style='text-align:center; vertical-align:middle'>$fields[4]</td>";
     $ptablerows = $ptablerows . "<td style='text-align:left; vertical-align:middle'>";
     if ($status eq "0") {
       $ptablerows = $ptablerows . "<img src='/plugins/$psubfolder/images/icons/statusred.png' alt='" . $phrase->param("TXT0016") . "' title='" . $phrase->param("TXT0017") . "'></td>";
@@ -243,8 +245,8 @@ open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could
       next;
     }
     @fields = split(/\|/);
-    if (@fields[0] eq $db || $db eq "all") {
-	open(F1,">$installfolder/data/plugins/$psubfolder/databases/@fields[0].status");
+    if ($fields[0] eq $db || $db eq "all") {
+	open(F1,">$installfolder/data/plugins/$psubfolder/databases/$fields[0].status");
 	flock(F1, 2);
 	print F1 "1";
 	close(F1);
@@ -278,8 +280,8 @@ open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could
       next;
     }
     @fields = split(/\|/);
-    if (@fields[0] eq $db || $db eq "all") {
-	open(F1,">$installfolder/data/plugins/$psubfolder/databases/@fields[0].status");
+    if ($fields[0] eq $db || $db eq "all") {
+	open(F1,">$installfolder/data/plugins/$psubfolder/databases/$fields[0].status");
 	flock(F1, 2);
 	print F1 "2";
 	close(F1);
@@ -318,14 +320,14 @@ sub delete {
 		  next;
 		}
 		@fields = split(/\|/);
-		if (@fields[0] ne $db) {
+		if ($fields[0] ne $db) {
 				$newfilecontent .= $_ . "\n";
 				next;
 		}
 		# Move files to /tmp - /tmp usually is cleared on reboot
-		move ("$installfolder/data/plugins/$psubfolder/databases/@fields[0].status", "/tmp/");
-		move ("$installfolder/data/plugins/$psubfolder/databases/@fields[0].info", "/tmp/");
-		move ("$installfolder/data/plugins/$psubfolder/databases/@fields[0].rrd", "/tmp/");
+		move ("$installfolder/data/plugins/$psubfolder/databases/$fields[0].status", "/tmp/");
+		move ("$installfolder/data/plugins/$psubfolder/databases/$fields[0].info", "/tmp/");
+		move ("$installfolder/data/plugins/$psubfolder/databases/$fields[0].rrd", "/tmp/");
 	}
 	# Create backups of databases.dat every delete
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
@@ -381,20 +383,26 @@ sub header {
 
   # create help page
   $helplink = "http://www.loxwiki.eu:80/x/o4CO";
-  open(F,"$installfolder/templates/system/$lang/help/$help.html") || die "Missing template system/$lang/help/$help.html";
-    @help = <F>;
-    foreach (@help){
-      s/[\n\r]/ /g;
-      $helptext = $helptext . $_;
-    }
-  close(F);
 
-  open(F,"$installfolder/templates/system/$lang/header.html") || die "Missing template system/$lang/header.html";
-    while (<F>) {
-      $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-      print $_;
-    }
-  close(F);
+  LoxBerry::Web::lbheader("Statistics 4 Loxone", $helplink, "help.html");
+  
+
+
+
+  # open(F,"$installfolder/templates/system/$lang/help/$help.html") || die "Missing template system/$lang/help/$help.html";
+    # @help = <F>;
+    # foreach (@help){
+      # s/[\n\r]/ /g;
+      # $helptext = $helptext . $_;
+    # }
+  # close(F);
+
+  # open(F,"$installfolder/templates/system/$lang/header.html") || die "Missing template system/$lang/header.html";
+    # while (<F>) {
+      # $_ =~ s/<!--\$(.*?)-->/${$1}/g;
+      # print $_;
+    # }
+  # close(F);
 
 }
 
@@ -404,11 +412,12 @@ sub header {
 
 sub footer {
 
-  open(F,"$installfolder/templates/system/$lang/footer.html") || die "Missing template system/$lang/footer.html";
-    while (<F>) {
-      $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-      print $_;
-    }
-  close(F);
+  LoxBerry::Web::lbfooter();
+  # open(F,"$installfolder/templates/system/$lang/footer.html") || die "Missing template system/$lang/footer.html";
+    # while (<F>) {
+      # $_ =~ s/<!--\$(.*?)-->/${$1}/g;
+      # print $_;
+    # }
+  # close(F);
 
 }

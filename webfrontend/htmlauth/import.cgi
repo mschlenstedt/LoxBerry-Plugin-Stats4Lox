@@ -19,32 +19,34 @@
 # Modules
 ##########################################################################
 
-use lib './lib';
-use LoxBerry::Stats4Lox;
+use LoxBerry::System;
+require "$lbpbindir/libs/Stats4Lox.pm";
 use warnings;
 
 
 use CGI;
-use CGI::Carp qw(fatalsToBrowser);
+# use CGI::Carp qw(fatalsToBrowser);
 use CGI qw/:standard/;
-use Config::Simple;
-use Cwd 'abs_path';
 use DateTime;
 use File::Basename;
-use File::HomeDir;
-use File::Path qw(make_path);
 use File::stat;
 use HTML::Entities;
-use HTTP::Request;
-#use HTML::Restrict;
-use LWP::UserAgent;
-use POSIX qw(strftime);
-use Socket;
-use String::Escape qw( unquotemeta );
 use Time::HiRes qw/ time sleep /;
-use URI::Escape;
 use XML::LibXML;
-use XML::Simple qw(:strict);
+
+## Removed with 0.3.1
+# use Config::Simple;
+# use Cwd 'abs_path';
+# use File::HomeDir;
+# use File::Path qw(make_path);
+# use HTTP::Request;
+# #use HTML::Restrict;
+# use LWP::UserAgent;
+# use POSIX qw(strftime);
+# use Socket;
+# use String::Escape qw( unquotemeta );
+# use URI::Escape;
+# use XML::Simple qw(:strict);
 
 # Christian Import
 # use Time::localtime;
@@ -53,14 +55,15 @@ use XML::Simple qw(:strict);
 # Set maximum file upload to approx. 7 MB
 # $CGI::POST_MAX = 1024 * 10000;
 
-#use strict;
-#no strict "refs"; # we need it for template system
+use strict;
+no strict "refs"; # we need it for template system
+
 our $namef;
 our $value;
-our @query;
+our %query;
 our @fields;
 our @lines;
-my $home = File::HomeDir->my_home;
+my $home = $lbhomedir;
 our %cfg_mslist;
 our $upload_message;
 our $stattable;
@@ -88,11 +91,10 @@ our %StatTypes = ( 	1, "Jede Änderung (max. ein Wert pro Minute)",
 ##########################################################################
 
 # Version of this script
-$version = "0.1.4";
+my $version = "0.3.1.1";
 
 # Figure out in which subfolder we are installed
-our $psubfolder = abs_path($0);
-$psubfolder =~ s/(.*)\/(.*)\/(.*)$/$2/g;
+our $psubfolder = $lbpplugindir;
 
 $logfilepath = "$home/log/plugins/$psubfolder/import_cgi.log";
 openlogfile();
@@ -121,6 +123,7 @@ for (my $msnr = 1; $msnr <= $miniservercount; $msnr++) {
 #########################################################################
 
 # Everything from URL
+our $saveformdata;
 foreach (split(/&/,$ENV{'QUERY_STRING'}))
 {
   ($namef,$value) = split(/=/,$_,2);
@@ -134,12 +137,12 @@ foreach (split(/&/,$ENV{'QUERY_STRING'}))
 # Set parameters coming in - get over post
   if ( !$query{'saveformdata'} ) { 
 	if ( param('saveformdata') ) { 
-		our $saveformdata = quotemeta(param('saveformdata')); 
+		$saveformdata = quotemeta(param('saveformdata')); 
 	} else { 
-		our $saveformdata = 0;
+		$saveformdata = 0;
 	} 
   } else { 
-	our $saveformdata = quotemeta($query{'saveformdata'}); 
+	$saveformdata = quotemeta($query{'saveformdata'}); 
 }
 
 if ( !$query{'lang'} ) {
@@ -157,6 +160,7 @@ $saveformdata =~ tr/0-1//cd;
 $saveformdata = substr($saveformdata,0,1);
 
 # Save if button save was pressed
+my $doapply;
 if ( param('submitbtn') ) { $doapply = 1; }
 
 # Init Language
@@ -227,7 +231,7 @@ sub form {
 	######################
 	
 	# Print header
-	$template_title = $pphrase->param("TXT0000") . ": " . $pphrase->param("TXT0001");
+	my $template_title = $pphrase->param("TXT0000") . ": " . $pphrase->param("TXT0001");
 	print "Content-Type: text/html\n\n";
 	&lbheader;
 	
@@ -291,10 +295,11 @@ sub form {
 sub save 
 {
 
-#	&footer;
+	my $resp_dbnr;
+	#	&footer;
 
 	# On saving form, parse form data and create import jobs in FS
-	$form_linenumbers = param("linenumbers");
+	my $form_linenumbers = param("linenumbers");
 		
 	if ($form_linenumbers <= 0) { 
 		logger(2, "Seems to have empty POST data. (Form Linenumbers: " . $form_linenumbers . ")");
@@ -315,7 +320,7 @@ sub save
 	logger(4, "Stats import path: $job_basepath");
 	
 	# Read databases file for names and db id's for uniquness check
-	my %databases_by_name = LoxBerry::Stats4Lox::get_databases_by_name();
+	my %databases_by_name = Stats4Lox::get_databases_by_name();
 	
 	for (my $line = 1; $line <= $form_linenumbers; $line++) {
 		logger(4, "Line " . $line . ": UID " . param("loxuid_" . $line));
@@ -338,6 +343,7 @@ sub save
 		my $stat_ms = param("msnr_$line");
 		my $unit = param("unit_$line");
 		my $loxtype = param("type_$line");
+		
 
 		# Check if loxonename already exists in databases list
 		if (! defined $databases_by_name{lc($loxonename)}) {
@@ -406,7 +412,7 @@ sub save
 			# Check if a job is already running
 			if (! glob("$job_basepath/$loxuid.running.*" )) {
 				# Not running - create job
-				$job = new Config::Simple(syntax=>'ini');
+				my $job = new Config::Simple(syntax=>'ini');
 				$job->param("loxonename", 	uri_unescape($loxonename));
 				$job->param("loxuid", 		$loxuid);
 				$job->param("statstype", 	$statstype);
@@ -529,8 +535,9 @@ sub generate_import_table
 	
 	# Read Stat definitions and prepare dropdown string
 	# Read dbsettings names
-	my %dbsettings = LoxBerry::Stats4Lox::get_dbsettings();
-		
+	my %dbsettings = Stats4Lox::get_dbsettings();
+	our $statstable;
+	our $table_linecount = 0;	
 	# Loop the statistic objects
 	foreach my $statsobj (sort keys %lox_statsobject) {
 	#foreach my $statsobj (sort  {$lox_statsobject{$b}{Title} <=> $lox_statsobject{$a}{Title}}    keys (%lox_statsobject)) {
@@ -538,7 +545,8 @@ sub generate_import_table
 		
 		my $statdef_dropdown = "<select data-mini=\"true\" name=\"statdef_$table_linecount\">\n";
 		my $statdef_nr = 0;
-		foreach my $statdef (sort keys %dbsettings) {
+		my $statdef;
+		foreach $statdef (sort keys %dbsettings) {
 			$statdef_nr++;
 		# Preselect Nr. 2 (Energy-Definition) if Loxone-Stat is "Energy", else Nr. 1
 		if ((($statdef_nr == 1) && ($lox_statsobject{$statsobj}{Type} ne "Energy")) || 
@@ -637,7 +645,8 @@ sub readloxplan
 
 	# Prepare data from LoxPLAN file
 	my $parser = XML::LibXML->new();
-	eval { our $lox_xml = $parser->parse_file($loxconfig_path);	};
+	our $lox_xml;
+	eval { $lox_xml = $parser->parse_file($loxconfig_path);	};
 	if ($@) {
 		logger(1, "import.cgi: Cannot parse LoxPLAN XML file.");
 		#exit(-1);
@@ -766,7 +775,7 @@ sub readloxplan
 
 sub error 
 {
-	$template_title = $pphrase->param("TXT0000") . " - " . $pphrase->param("TXT0001");
+	my $template_title = $pphrase->param("TXT0000") . " - " . $pphrase->param("TXT0001");
 	print "Content-Type: text/html\n\n"; 
 	&lbheader;
 	open(F,"$installfolder/templates/system/$lang/error.html") || die "Missing template system/$lang/error.html";
@@ -822,11 +831,6 @@ sub error
 	  close(F);
 	}
 
-#####################################################
-# Trim
-#####################################################
-	
-sub  trim { my $s = shift; $s =~ s/^\s+|\s+$//g; return $s };
 	
 #####################################################
 # Logging
@@ -858,11 +862,11 @@ sub  trim { my $s = shift; $s =~ s/^\s+|\s+$//g; return $s };
 		my ($level, $message) = @_;
 		
 		if ( $loglevel == 5 ) {
-			($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
+			my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
 			my $now_string = sprintf("%04d-%02d-%02d %02d:%02d:%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec);
 			print STDERR "$now_string Stats4Lox import.cgi $loglevels[$level]: $message\r\n";
 		} elsif ( $level <= $loglevel && $loglevel <= 4) {
-			($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
+			my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
 			my $now_string = sprintf("%04d-%02d-%02d %02d:%02d:%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec);
 			print $lf "$now_string $loglevels[$level]: $message\r\n";
 		}
