@@ -18,10 +18,10 @@
 ##########################################################################
 # Modules
 ##########################################################################
+use LoxBerry::System;
+use LoxBerry::Web;
+require "$lbpbindir/libs/Stats4Lox.pm";
 
-use Config::Simple;
-use File::HomeDir;
-use Cwd 'abs_path';
 #use warnings;
 #use strict;
 #no strict "refs"; # we need it for template system
@@ -41,7 +41,7 @@ our $helplink;
 our $installfolder;
 our $languagefile;
 our $version;
-our $home = File::HomeDir->my_home;
+our $home = $lbhomedir;
 
 ##########################################################################
 # Read Settings
@@ -51,8 +51,7 @@ our $home = File::HomeDir->my_home;
 $version = "0.0.1";
 
 # Figure out in which subfolder we are installed
-our $psubfolder = abs_path($0);
-$psubfolder =~ s/(.*)\/(.*)\/(.*)$/$2/g;
+our $psubfolder = $lbpplugindir;
 
 $cfg             = new Config::Simple("$home/config/system/general.cfg");
 $installfolder   = $cfg->param("BASE.INSTALLFOLDER");
@@ -90,14 +89,22 @@ $template_title = $phrase->param("TXT0000") . ": " . $phrase->param("TXT0001");
 $help = "plugin";
 
 # Print Template
-&header;
+
+# Print header
+	our $helplink = "http://www.loxwiki.eu:80/x/uYCm";
+	Stats4Lox::navbar_main(99);
+	LoxBerry::Web::lbheader("Statistics 4 Loxone", $helplink, "help.html");
+  
+
+
 open(F,"$installfolder/templates/plugins/$psubfolder/$lang/about.html") || die "Missing template plugins/$psubfolder/$lang/about.html";
   while (<F>) {
     $_ =~ s/<!--\$(.*?)-->/${$1}/g;
     print $_;
   }
 close(F);
-&footer;
+
+LoxBerry::Web::lbfooter();
 
 exit;
 
@@ -106,43 +113,3 @@ exit;
 # Subroutines
 #
 #####################################################
-
-#####################################################
-# Header
-#####################################################
-
-sub header {
-
-  # create help page
-  $helplink = "http://www.loxwiki.eu:80/x/o4CO";
-  open(F,"$installfolder/templates/system/$lang/help/$help.html") || die "Missing template system/$lang/help/$help.html";
-    @help = <F>;
-    foreach (@help){
-      s/[\n\r]/ /g;
-      $helptext = $helptext . $_;
-    }
-  close(F);
-
-  open(F,"$installfolder/templates/system/$lang/header.html") || die "Missing template system/$lang/header.html";
-    while (<F>) {
-      $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-      print $_;
-    }
-  close(F);
-
-}
-
-#####################################################
-# Footer
-#####################################################
-
-sub footer {
-
-  open(F,"$installfolder/templates/system/$lang/footer.html") || die "Missing template system/$lang/footer.html";
-    while (<F>) {
-      $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-      print $_;
-    }
-  close(F);
-
-}

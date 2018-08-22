@@ -20,6 +20,7 @@
 ##########################################################################
 
 use LoxBerry::System;
+use LoxBerry::Web;
 require "$lbpbindir/libs/Stats4Lox.pm";
 use warnings;
 
@@ -231,24 +232,12 @@ sub form {
 	######################
 	
 	# Print header
-	my $template_title = $pphrase->param("TXT0000") . ": " . $pphrase->param("TXT0001");
-	print "Content-Type: text/html\n\n";
-	&lbheader;
-	
+	our $helplink = "http://www.loxwiki.eu:80/x/uYCm";
+	Stats4Lox::navbar_main(20);
+	LoxBerry::Web::lbheader("Statistics 4 Loxone", $helplink, "help.html");
+  
 		
-	# Print top menu template #
-	###########################
-	# print 
-	# '	<script>$(document).ready(function() {
-		# $(\'#menutop_import\').removeClass(\'ui-btn\').addClass(\'ui-btn-active\');
-		# });</script>';
-		open(F,"$installfolder/templates/plugins/$psubfolder/de/import_topmenu.html") || die "Missing template plugins/$psubfolder/de/top_menu.html";
-	  while (<F>) 
-	  {
-	    $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-	    print $_;
-	  }
-	close(F);
+	
 	
 	# Print Upload Template #
 	#########################
@@ -272,18 +261,7 @@ sub form {
 	close(F);
 	
 	
-	
-	# print table footer Template
-	
-	
-#	open(F,"$installfolder/templates/plugins/$psubfolder/$lang/addstat_end.html") || die "Missing template plugins/$psubfolder/$lang/addstat_end.html";
-#	  while (<F>) 
-#	  {
-#	    $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-#	    print $_;
-#	  }
-#	close(F);
-	&footer;
+	LoxBerry::Web::lbfooter();
 	exit;
 
 }
@@ -789,49 +767,7 @@ sub error
 	exit;
 }
 
-#####################################################
-# Page-Header-Sub
-#####################################################
 
-	sub lbheader 
-	{
-	  # Create Help page
-	  our $helplink = "http://www.loxwiki.eu:80/x/uYCm";
-	  open(F,"$installfolder/templates/plugins/$psubfolder/$lang/help.html") || die "Missing template plugins/$psubfolder/$lang/help.html";
-	    my @help = <F>;
- 	    our $helptext;
-	    foreach (@help)
-	    {
-	      s/[\n\r]/ /g;
-	      $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-	      $helptext = $helptext . $_;
-	    }
-	  close(F);
-	  open(F,"$installfolder/templates/system/$lang/header.html") || die "Missing template system/$lang/header.html";
-	    while (<F>) 
-	    {
-	      $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-	      print $_;
-	    }
-	  close(F);
-	}
-
-#####################################################
-# Footer
-#####################################################
-
-	sub footer 
-	{
-	  open(F,"$installfolder/templates/system/$lang/footer.html") || die "Missing template system/$lang/footer.html";
-	    while (<F>) 
-	    {
-	      $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-	      print $_;
-	    }
-	  close(F);
-	}
-
-	
 #####################################################
 # Logging
 #####################################################

@@ -40,9 +40,31 @@ $pcfg->import_names('CFG');
 ######################################
 ## Functions to run on demand
 
+############################
+# Main Navigation Bar
+############################
+sub navbar_main
+{
+	my ($selected) = @_;
+	
+	$main::navbar{10}{Name} = "Statistiken";
+	$main::navbar{10}{URL} = './index.cgi';
+	 
+	$main::navbar{20}{Name} = "Import";
+	$main::navbar{20}{URL} = './import.cgi';
+	 
+	# $main::navbar{30}{Name} = "Charts";
+	# $main::navbar{30}{URL} = './charts.cgi';
+	
+	# $main::navbar{40}{Name} = "Indexes";
+	# $main::navbar{40}{URL} = './indexes.cgi';
+	
+	$main::navbar{99}{Name} = "Über...";
+	$main::navbar{99}{URL} = './about.cgi';
 
+	$main::navbar{$selected}{active} = 1;
 
-
+}
 
 use base 'Exporter';
 #our @EXPORT = (

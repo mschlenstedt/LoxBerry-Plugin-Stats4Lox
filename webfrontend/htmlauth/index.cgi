@@ -383,7 +383,7 @@ sub header {
 
   # create help page
   $helplink = "http://www.loxwiki.eu:80/x/o4CO";
-
+  Stats4Lox::navbar_main(10);
   LoxBerry::Web::lbheader("Statistics 4 Loxone", $helplink, "help.html");
   
 
