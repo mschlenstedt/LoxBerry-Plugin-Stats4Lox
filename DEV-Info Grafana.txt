@@ -1,0 +1,52 @@
+NUR RASPBERRY
+echo "deb https://dl.bintray.com/fg2it/deb stretch main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
+sudo apt-get update
+sudo apt-get install grafana
+sudo /bin/systemctl daemon-reload
+sudo /bin/systemctl enable grafana-server
+
+Influx-DB installieren (geht überall):
+
+curl -sL https://repos.influxdata.com/influxdb.key | sudo apt-key add -
+source /etc/os-release
+test $VERSION_ID = "7" && echo "deb https://repos.influxdata.com/debian wheezy stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+test $VERSION_ID = "8" && echo "deb https://repos.influxdata.com/debian jessie stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+test $VERSION_ID = "9" && echo "deb https://repos.influxdata.com/debian stretch stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+sudo apt-get update && sudo apt-get install influxdb
+sudo systemctl start influxdb
+
+
+
+Direkt von Grafana (geht nicht)
+
+
+echo "deb https://packagecloud.io/grafana/stable/debian/ jessie main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
+curl https://packagecloud.io/gpg.key | sudo apt-key add -
+sudo apt-get update
+sudo apt-get install grafana
+sudo /bin/systemctl daemon-reload
+sudo /bin/systemctl enable grafana
+
+
+
+
+RRD Backend
+* Simple JSON Datasource - a generic backend datasource
+sudo grafana-cli plugins install grafana-simple-json-datasource
+sudo service grafana-server restart
+
+* RRD Datasource https://github.com/doublemarket/grafana-rrd-server
+apt-get install librrd-dev
+Download package
+wget https://github.com/doublemarket/grafana-rrd-server/archive/master.zip
+Unzip
+Starten
+grafana-rrd-server -r /opt/loxberry/data/plugins/stats4lox/databases
+
+Go installieren 
+apt-get install golang-go
+
+chmod +x *
+
+export GOPATH=/root/gocode
+
