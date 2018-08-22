@@ -22,19 +22,32 @@ $pcfg = new Config::Simple($pcfgfile);
 $pcfg->autosave(1);
 
 # RRD Database folder
-our $rrdfolder;
 if ($pcfg->param('Main.rrdfolder') and ! -e $pcfg->param('Main.rrdfolder')) {
-	# Configured but does not exists
-	undef $rrdfolder;
+	# Configured BUT does not exists
+	# -> Do nothing
 }
 if (! $pcfg->param('Main.rrdfolder')) {
-	# Not configured
+	# Not configured at all --> set default
 	$rrdfolder = "$LoxBerry::System::lbpdatadir/databases";
 	$pcfg->param('Main.rrdfolder', $rrdfolder);
 }
 
+if (! $pcfg->param('Main.configfolder') or ! -e $pcfg->param('Main.configfolder')) {
+	# Configured OR does not exists --> set default
+	$pcfg->param('Main.configfolder', "$LoxBerry::System::lbpconfigdir");
+}
+
+
+
+
+
+
+
+
 # Finally import to CFG namespace
-$pcfg->import_names('CFG');
+$Stats4Lox::pcfg->import_names('CFG');
+
+
 # Access config variables by $CFG::Main_rrdfolder
 
 ######################################
@@ -58,6 +71,9 @@ sub navbar_main
 	
 	# $main::navbar{40}{Name} = "Indexes";
 	# $main::navbar{40}{URL} = './indexes.cgi';
+	
+	$main::navbar{90}{Name} = "Einstellungen";
+	$main::navbar{90}{URL} = './general_settings.cgi';
 	
 	$main::navbar{99}{Name} = "Über...";
 	$main::navbar{99}{URL} = './about.cgi';
