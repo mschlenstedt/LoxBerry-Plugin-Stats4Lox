@@ -29,6 +29,12 @@ if ($R::action eq "change" and $R::key eq "GRAFANA.enablerrdserver" and $R::valu
 	start_rrdserver();
 }
 
+if ($R::action eq "start" and $R::key eq "GRAFANA.enablerrdserver") {
+	# Starting from daemon
+	start_rrdserver();
+}
+
+
 # Delete a full block in the config file
 if ($R::action eq "delete_block") {
 	$Stats4Lox::pcfg->set_block($R::key);
