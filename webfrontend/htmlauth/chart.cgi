@@ -119,7 +119,7 @@ $phrase = new Config::Simple($languagefile);
 ##########################################################################
 
 # Check for Chart Engine
-open(F,"<$installfolder/config/plugins/$psubfolder/charts.dat");
+open(F,"<$CFG::MAIN_CONFIGFOLDER/charts.dat");
 @data = <F>;
 foreach (@data){
 	s/[\n\r]//g;

@@ -210,7 +210,7 @@ $session->expire('+24h');    # expire after 24 hour
 # Load settings from database if needed
 if ( ($load || $script) && $settings > 1 ) {
 	# Read values from dbsettings database
-	open(F,"<$installfolder/config/plugins/$psubfolder/dbsettings.dat");
+	open(F,"<$CFG::MAIN_CONFIGFOLDER/dbsettings.dat");
 	@data = <F>;
 	my $found = 0;
 	foreach (@data){
@@ -591,7 +591,7 @@ if ( !$query{'block'} ) {
 }
 
 # Places and category list - sort in alphabetical order
-open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat") || die "Cannot open database for RRD-databases.";
+open(F,"<$CFG::MAIN_CONFIGFOLDER/databases.dat") || die "Cannot open database for RRD-databases.";
 flock(F,2);
 @lines = <F>;
 close(F);
@@ -717,7 +717,7 @@ sub form {
 		$msselectmenu = $msselectmenu . ">" . $cfg->param("MINISERVER$i.NAME") . "</option>\n";
 	}
 
-	open(F,"<$installfolder/config/plugins/$psubfolder/dbsettings.dat");
+	open(F,"<$CFG::MAIN_CONFIGFOLDER/dbsettings.dat");
 		@data = <F>;
 		foreach (@data){
 			s/[\n\r]//g;
@@ -954,7 +954,7 @@ sub save
 	}
 
 	# Create Database
-	open(F,"<$installfolder/config/plugins/$psubfolder/id_databases.dat") or die "Cannot open id_databases.dat: $!";
+	open(F,"<$CFG::MAIN_CONFIGFOLDER/id_databases.dat") or die "Cannot open id_databases.dat: $!";
 		our $lastid = <F>;
 	close (F);
 
@@ -964,7 +964,7 @@ sub save
 		our $dbfilename = sprintf("%04d", $lastid);
 		if (!-e $CFG::MAIN_RRDFOLDER . "/$dbfilename.rrd") {
 			$i = 1;
-			open(F,">$installfolder/config/plugins/$psubfolder/id_databases.dat") or die "Cannot open id_databases.dat: $!";
+			open(F,">$CFG::MAIN_CONFIGFOLDER/id_databases.dat") or die "Cannot open id_databases.dat: $!";
 				flock(F, 2);
 				print F $lastid;
 			close (F);
@@ -1011,7 +1011,7 @@ sub save
 	}
 
 	# Register new database
-	open(F,">>$installfolder/config/plugins/$psubfolder/databases.dat") || die "Cannot open database for RRD-databases.";
+	open(F,">>$CFG::MAIN_CONFIGFOLDER/databases.dat") || die "Cannot open database for RRD-databases.";
 		flock(F, 2);
 		binmode F, ':encoding(UTF-8)';
 		$description = Encode::decode( "UTF-8", unquotemeta($description) );
@@ -1042,7 +1042,7 @@ sub save
 	# Save DBSettings
 	if ($savedbsettings) {
 		$i = 0;
-		open(F,"+<$installfolder/config/plugins/$psubfolder/dbsettings.dat") || die "Cannot open database for DB-Settings.";
+		open(F,"+<$CFG::MAIN_CONFIGFOLDER/dbsettings.dat") || die "Cannot open database for DB-Settings.";
 		flock(F, 2);
 		binmode F, ':encoding(UTF-8)';
 		@data = <F>;

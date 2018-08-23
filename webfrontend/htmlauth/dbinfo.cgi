@@ -124,7 +124,7 @@ print "Content-Type: text/html\n\n";
 $template_title = $phrase->param("TXT0000") . ": " . $phrase->param("TXT0001");
 $help = "plugin";
 
-open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
+open(F,"<$CFG::MAIN_CONFIGFOLDER/databases.dat");
   @data = <F>;
   foreach (@data){
     s/[\n\r]//g;

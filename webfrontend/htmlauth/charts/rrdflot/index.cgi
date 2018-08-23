@@ -244,7 +244,7 @@ sub generate_stat_overview
 	
 	# Read Stats4Lox databases
 	# Re-used from Michael dbinfo.cgi
-	open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
+	open(F,"<$CFG::MAIN_CONFIGFOLDER/databases.dat");
 	my @data = <F>;
 	close (F) ;
 	

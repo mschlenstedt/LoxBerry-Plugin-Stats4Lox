@@ -174,7 +174,7 @@ $help = "plugin";
 # Create table rows for each Plugin entry
 $ptablerows = "";
 $i = 1;
-open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
+open(F,"<$CFG::MAIN_CONFIGFOLDER/databases.dat");
   @data = <F>;
   foreach (@data){
     s/[\n\r]//g;
@@ -236,7 +236,7 @@ if (!$db) {
 }
 
 # Update database
-open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could not open databases.dat: $!";
+open(F,"<$CFG::MAIN_CONFIGFOLDER/databases.dat") or die "Could not open databases.dat: $!";
   @data = <F>;
   foreach (@data){
     s/[\n\r]//g;
@@ -271,7 +271,7 @@ if (!$db) {
 }
 
 # Update database
-open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could not open databases.dat: $!";
+open(F,"<$CFG::MAIN_CONFIGFOLDER/databases.dat") or die "Could not open databases.dat: $!";
   @data = <F>;
   foreach (@data){
     s/[\n\r]//g;
@@ -309,7 +309,7 @@ sub delete {
 	}
 
 	# Read
-	open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could not open databases.dat: $!";
+	open(F,"<$CFG::MAIN_CONFIGFOLDER/databases.dat") or die "Could not open databases.dat: $!";
 	flock(F, 2);
 	@data = <F>;
 	foreach (@data){
@@ -332,10 +332,10 @@ sub delete {
 	# Create backups of databases.dat every delete
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
 	my $nowstring = sprintf("%04d%02d%02d-%02d%02d%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec);
-	copy("$installfolder/config/plugins/$psubfolder/databases.dat", "/tmp/databases.$nowstring.back");
+	copy("$CFG::MAIN_CONFIGFOLDER/databases.dat", "/tmp/databases.$nowstring.back");
 	close(F);
 	# Write new file
-	open(F,">$installfolder/config/plugins/$psubfolder/databases.dat") or die "Could not open databases.dat: $!";
+	open(F,">$CFG::MAIN_CONFIGFOLDER/databases.dat") or die "Could not open databases.dat: $!";
 	flock(F, 2);
 	print F $newfilecontent;
 	close (F);

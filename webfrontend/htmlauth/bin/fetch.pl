@@ -75,7 +75,7 @@ my $logmessage = "<INFO> Starting $0 Version $version for Step $step s";
 sleep rand(5);
 
 # Read Statistics/Databases
-open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat") or "Cannot open databases.dat: $!";
+open(F,"<$CFG::MAIN_CONFIGFOLDER/databases.dat") or "Cannot open databases.dat: $!";
 	@data = <F>;
 close (F);
 

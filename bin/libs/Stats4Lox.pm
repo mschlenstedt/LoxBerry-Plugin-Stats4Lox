@@ -33,7 +33,7 @@ if (! $pcfg->param('Main.rrdfolder')) {
 
 if (! $pcfg->param('Main.configfolder') or ! -e $pcfg->param('Main.configfolder')) {
 	# Configured OR does not exists --> set default
-	$pcfg->param('Main.configfolder', "$LoxBerry::System::lbpconfigdir");
+	$pcfg->param('Main.configfolder', "$LoxBerry::System::lbpdatadir/s4ldata");
 }
 
 
@@ -92,7 +92,7 @@ use base 'Exporter';
 sub get_dbsettings
 {
 	if (! %dbsettings) {
-		open(F,"<$installfolder/config/plugins/$psubfolder/dbsettings.dat");
+		open(F,"<$CFG::MAIN_CONFIGFOLDER/dbsettings.dat");
         my @data = <F>;
         foreach (@data) {
             s/[\n\r]//g;
@@ -125,7 +125,7 @@ sub get_databases_by_name
 {
 	my %entries;
 	
-	open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
+	open(F,"<$CFG::MAIN_CONFIGFOLDER/databases.dat");
 	my @data = <F>;
 	close (F) ;
 		
@@ -167,7 +167,7 @@ sub get_databases_by_id
 {
 	my %entries;
 	
-	open(F,"<$installfolder/config/plugins/$psubfolder/databases.dat");
+	open(F,"<$CFG::MAIN_CONFIGFOLDER/databases.dat");
 	my @data = <F>;
 	close (F) ;
 		
