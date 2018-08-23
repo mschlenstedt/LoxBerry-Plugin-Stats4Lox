@@ -1,19 +1,19 @@
 #!/bin/bash
-
 # Will be executed as user "root".
 
-# Name this file "daemon.sh" in your plugin-archive. It will be renamed to NAME
-# during installation
+# Replace-Variables
+PLUGINNAME=REPLACELBPPLUGINDIR
+LBPCONFIGDIR=REPLACELBPCONFIGDIR
+LBPHTMLAUTHDIR=REPLACELBPHTMLAUTHDIR
+LBPLOGDIR=REPLACELBPLOGDIR
 
 # Source logging library and iniparser
 . $LBHOMEDIR/libs/bashlib/loxberry_log.sh
 . $LBHOMEDIR/libs/bashlib/iniparser.sh
 
-pluginname=$(basename $0 .sh)
-
-PACKAGE=$pluginname
+PACKAGE=$PLUGINNAME
 NAME=Daemon
-FILENAME=${LBPLOG}/${PACKAGE}/daemon.log
+FILENAME=$LBPLOGDIR/daemon.log
 
 LOGSTART "DAEMON Script from Stats4Lox Plugin"
 
@@ -24,26 +24,17 @@ LOGSTART "DAEMON Script from Stats4Lox Plugin"
 # Use correct rrdcached settings
 if [ ! -L /etc/default/rrdcached ]; then
   mv /etc/default/rrdcached /etc/default/rrdcached.old
-  ln -s REPLACEINSTALLFOLDER/config/plugins/REPLACEFOLDERNAME/rrdcached /etc/default/rrdcached
+  ln -s $LBPCONFIGDIR/rrdcached /etc/default/rrdcached
   /usr/sbin/service rrdcached restart
 fi
 
-if [ ! -L REPLACEINSTALLFOLDER/log/plugins/REPLACEFOLDERNAME/stats4lox.log ]; then
-  timestamp=$(date +%s)
-  mv REPLACEINSTALLFOLDER/log/plugins/REPLACEFOLDERNAME/stats4lox.log REPLACEINSTALLFOLDER/log/plugins/REPLACEFOLDERNAME/stats4lox.log.$timestamp
-fi
-
-touch /run/shm/REPLACEFOLDERNAME/stats4lox.log 
-chown loxberry.loxberry /run/shm/REPLACEFOLDERNAME/stats4lox.log 
-ln -s /run/shm/REPLACEFOLDERNAME/stats4lox.log REPLACEINSTALLFOLDER/log/plugins/REPLACEFOLDERNAME/stats4lox.log
-
 # Grafana Integration
-iniparser REPLACELBPCONFIGDIR/stats4lox.cfg "GRAFANA"
+iniparser $LBPCONFIGDIR/stats4lox.cfg "GRAFANA"
 GRAFANAenablerrdserver="${GRAFANAenablerrdserver^^}"
 LOGINF "Grafana Integration enabled: $GRAFANAenablerrdserver"
 if [ "$GRAFANAenablerrdserver" == "TRUE" ] || [ "$GRAFANAenablerrdserver" == "1" ] ; then
 	LOGINF "Starting Grafana Integration on port GRAFANArrdserverport"
-	REPLACELBPHTMLAUTHDIR/ajax/ajax-settings.cgi action=start key=GRAFANA.enablerrdserver
+	$LBPHTMLAUTHDIR/ajax/ajax-settings.cgi action=start key=GRAFANA.enablerrdserver
 fi
 
 
