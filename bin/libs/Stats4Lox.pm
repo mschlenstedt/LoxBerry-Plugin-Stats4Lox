@@ -203,6 +203,81 @@ sub get_databases_by_id
 	return %entries;
 }	 
 
+#############################################
+# Reads a full file and returns it as string
+# Parameter: $filename, Returns: $content
+sub read_file
+{
+	my ($filename) = @_;
+	local $/=undef;
+	open FILE, $filename or return undef;
+	my $string = <FILE>;
+	close FILE;
+	print STDERR "read_file: $filename finished\n";
+	return $string;
+}
+
+sub write_file
+{
+	my ($filename, $string) = @_;
+	open(my $fh, '>', $filename) or return undef;
+	print $fh $string;
+	close $fh;
+	return 1;
+}
+
+
+# Compares the S4L database timestamp with a Configfile timestamp
+sub update_grafana_dashboard
+{
+	print STDERR "update_grafana_dashboard\n";
+	# We need mtime in epoch
+	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
+		$atime,$mtime,$ctime,$blksize,$blocks) = stat("$CFG::MAIN_CONFIGFOLDER/databases.dat");
+	
+	# Leave if the the dashboards are up-to-date
+	return if ($CFG::GRAFANA_LAST_DASHBOARD_UPDATE and $mtime < $CFG::GRAFANA_LAST_DASHBOARD_UPDATE);
+		
+	# Generate dashboard json
+	print STDERR "update_grafana_dashboard: Need to update\n";
+	
+	require JSON;
+	require Clone;
+	my $dashtmpl = JSON::from_json(read_file("$LoxBerry::System::lbpdatadir/grafana-templates/grafana_dashboard_template.json"));
+	my $paneltmpl = JSON::from_json(read_file("$LoxBerry::System::lbpdatadir/grafana-templates/grafana_panel_template.json"));
+	
+	# print STDERR "dashtmpl: title " . $dashtmpl->{title} . "\n";
+	
+	my %rrd_dbs = get_databases_by_id();
+	my @panels = ( );
+	foreach my $rrdidx (sort keys %rrd_dbs) {
+		my $panel = Clone::clone($paneltmpl);
+		$panel->{id} = $rrdidx+0;
+		$panel->{title} = $rrd_dbs{$rrdidx}{Description};
+		$panel->{targets}[0]->{refId} = "A";
+		$panel->{targets}[0]->{target} = $rrd_dbs{$rrdidx}{dbidstr} . ":value";
+		$panel->{targets}[0]->{type} = "timeserie";
+		push(@panels, $panel);
+	}
+	
+	$dashtmpl->{panels} = \@panels;
+	
+	my $dashjson = JSON::to_json($dashtmpl, {pretty => 1});
+	write_file("$LoxBerry::System::lbpdatadir/grafana-dashboards/Stats4Lox.json", $dashjson);
+	$pcfg->param('GRAFANA.Last_Dashboard_Update', time);
+	$pcfg->write;
+	
+}
+
+
+
+# Executed after every successful or unsuccessful termination
+END
+{
+	if (LoxBerry::System::is_enabled($CFG::GRAFANA_ENABLERRDSERVER)) {
+		update_grafana_dashboard();
+	}
+}
 
 
 

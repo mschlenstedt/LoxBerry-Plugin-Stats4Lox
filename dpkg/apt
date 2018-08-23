@@ -5,3 +5,4 @@ libstring-escape-perl
 librrds-perl
 libproc-processtable-perl
 librrd-dev
+libclone-perl
