@@ -32,6 +32,7 @@ if ($R::action eq "change" and $R::key eq "GRAFANA.enablerrdserver" and $R::valu
 if ($R::action eq "start" and $R::key eq "GRAFANA.enablerrdserver") {
 	# Starting from daemon
 	start_rrdserver();
+	$resp{'success'} = "true";
 }
 
 
