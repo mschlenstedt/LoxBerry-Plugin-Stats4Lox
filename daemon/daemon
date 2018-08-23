@@ -14,15 +14,13 @@ LBPLOGDIR=REPLACELBPLOGDIR
 PACKAGE=$PLUGINNAME
 NAME=Daemon
 FILENAME=$LBPLOGDIR/daemon.log
+LOGLEVEL=7
 
 LOGSTART "DAEMON Script from Stats4Lox Plugin"
 
-# if [ -x /usr/bin/logger ]; then
-    # /usr/bin/logger "loxberry-plugin-$pluginname - DAEMON Script from Stats4Lox Plugin"
-# fi
-
 # Use correct rrdcached settings
 if [ ! -L /etc/default/rrdcached ]; then
+  LOGINF "Re-linking rrdcached settings file"
   mv /etc/default/rrdcached /etc/default/rrdcached.old
   ln -s $LBPCONFIGDIR/rrdcached /etc/default/rrdcached
   /usr/sbin/service rrdcached restart
@@ -37,6 +35,6 @@ if [ "$GRAFANAenablerrdserver" == "TRUE" ] || [ "$GRAFANAenablerrdserver" == "1"
 	$LBPHTMLAUTHDIR/ajax/ajax-settings.cgi action=start key=GRAFANA.enablerrdserver
 fi
 
-
+LOGEND "Daemon finished"
 # Finished
 exit 0
