@@ -36,7 +36,9 @@ if (! $pcfg->param('Main.configfolder') or ! -e $pcfg->param('Main.configfolder'
 	$pcfg->param('Main.configfolder', "$LoxBerry::System::lbpdatadir/s4ldata");
 }
 
-
+if (! $pcfg->param('GRAFANA.rrdserverport')) {
+	$pcfg->param('GRAFANA.rrdserverport', "3001");
+}
 
 
 
@@ -71,8 +73,12 @@ sub navbar_main
 	# $main::navbar{40}{Name} = "Indexes";
 	# $main::navbar{40}{URL} = './indexes.cgi';
 	
+
 	$main::navbar{90}{Name} = "Einstellungen";
 	$main::navbar{90}{URL} = './general_settings.cgi';
+
+	$main::navbar{95}{Name} = "Grafana Integration";
+	$main::navbar{95}{URL} = './grafana.cgi';
 	
 	$main::navbar{99}{Name} = "Über...";
 	$main::navbar{99}{URL} = './about.cgi';
