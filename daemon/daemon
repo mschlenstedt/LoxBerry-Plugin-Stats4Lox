@@ -32,7 +32,7 @@ GRAFANAenablerrdserver="${GRAFANAenablerrdserver^^}"
 LOGINF "Grafana Integration enabled: $GRAFANAenablerrdserver"
 if [ "$GRAFANAenablerrdserver" == "TRUE" ] || [ "$GRAFANAenablerrdserver" == "1" ] ; then
 	LOGINF "Starting Grafana Integration on port GRAFANArrdserverport"
-	$LBPHTMLAUTHDIR/ajax/ajax-settings.cgi action=start key=GRAFANA.enablerrdserver
+	su loxberry -c "$LBPHTMLAUTHDIR/ajax/ajax-settings.cgi action=start key=GRAFANA.enablerrdserver"
 fi
 
 LOGEND "Daemon finished"
