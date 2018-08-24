@@ -27,7 +27,7 @@ require "$lbpbindir/libs/Stats4Lox.pm";
 #use CGI qw/:standard/;
 #use Config::Simple;
 #use File::HomeDir;
-#use File::Copy;
+use File::Copy;
 #use Cwd 'abs_path';
 use warnings;
 use strict;
@@ -68,11 +68,10 @@ our $db;
 ##########################################################################
 
 # Version of this script
-$version = "0.3.1.1";
+$version = "0.3.1.2";
 
 # Figure out in which subfolder we are installed
-our $psubfolder = abs_path($0);
-$psubfolder =~ s/(.*)\/(.*)\/(.*)$/$2/g;
+our $psubfolder = $lbpplugindir;
 
 $cfg             = new Config::Simple("$home/config/system/general.cfg");
 $installfolder   = $cfg->param("BASE.INSTALLFOLDER");
