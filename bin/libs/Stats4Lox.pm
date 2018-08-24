@@ -230,7 +230,7 @@ sub write_file
 # Compares the S4L database timestamp with a Configfile timestamp
 sub update_grafana_dashboard
 {
-	print STDERR "update_grafana_dashboard\n";
+	# print STDERR "update_grafana_dashboard\n";
 	# We need mtime in epoch
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
 		$atime,$mtime,$ctime,$blksize,$blocks) = stat("$CFG::MAIN_CONFIGFOLDER/databases.dat");
