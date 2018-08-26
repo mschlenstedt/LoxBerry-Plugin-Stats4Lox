@@ -8,6 +8,7 @@ use strict;
 package Stats4Lox::JSON;
 
 our $DEBUG = 0;
+our $DUMP = 0;
 
 if ($DEBUG) {
 	print STDERR "Stats4Lox::JSON: Developer warning - DEBUG mode is enabled in module file\n" if ($DEBUG);
@@ -48,6 +49,7 @@ sub open
 		$self->{createfile} = 1;
 		$self->{jsoncontent} = "";
 		$self->{jsonobj} = JSON::from_json('{}');
+		$self->dump($self->{jsonobj}, "Empty object") if ($DUMP);
 		return $self->{jsonobj};
 	}
 	
@@ -77,6 +79,7 @@ sub open
 		print STDERR "Stats4Lox::JSON->open: ERROR parsing JSON file - Returning undef $@\n" if ($DEBUG);
 		return undef;
 	};
+	$self->dump($self->{jsonobj}, "Loaded object") if ($DUMP);
 	return $self->{jsonobj};
 	
 }
@@ -111,6 +114,57 @@ sub write
 	rename $self->{filename}, $self->{filename} . ".bkp";
 	rename $self->{filename} . ".tmp", $self->{filename};
 	$self->{jsoncontent} = $jsoncontent_new;
+	
+}
+
+sub find
+{
+	my $self = shift;
+		
+	my ($obj, $evalexpr) = @_;
+	
+	my @result;
+	
+	$self->dump($obj, "Find in object (datatype " . ref($obj) . ")") if ($DUMP);
+		
+	print STDERR "Stats4Lox::JSON->find: Condition: $evalexpr\n";
+	
+	# ARRAY handling
+	if (ref($obj) eq 'ARRAY')
+	{
+		foreach (0 ... $#{$obj}) {
+			my $key = $_;
+			$_ = ${$obj}[$key];
+			print "Array Key: $key\n";
+			if ( eval "$evalexpr" ) {
+				print "  FOUND in $_\n";
+				push @result, $key;
+			}
+		}
+	} 
+	# HASH handling
+	elsif (ref($obj) eq 'HASH') {
+		foreach (keys %{$obj}) {
+			my $key = $_;
+			$_ = $obj->{$key};
+			if ( eval "$evalexpr" ) {
+				push @result, $key;
+			}
+		}
+	}
+	return @result;
+
+}
+
+sub dump
+{
+	my $self = shift;
+	my ($obj, $comment) = @_;
+
+	require Data::Dumper;
+	$comment = "" if (!$comment);
+	print STDERR "DUMP $comment\n";
+	print STDERR Data::Dumper::Dumper($obj);
 	
 }
 
