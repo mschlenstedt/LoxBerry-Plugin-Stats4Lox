@@ -1,7 +1,10 @@
 use LoxBerry::System;
+require "$lbpbindir/libs/S4LJson.pm";
 use strict;
 
 package Stats4Lox;
+
+my $ConfigVersion = 1;
 
 my %dbsettings;
 my $installfolder = $LoxBerry::System::lbhomedir;
@@ -13,13 +16,20 @@ my $psubfolder = $LoxBerry::System::lbpplugindir;
 our $pcfgfile = "$LoxBerry::System::lbpconfigdir/stats4lox.cfg";
 our $pcfg;
 
+# Create config file if not exist
+
 if (! -e $pcfgfile) {
 		$pcfg = new Config::Simple(syntax=>'ini');
-		$pcfg->param("Main.ConfigVersion", "1");
+		$pcfg->param("Main.ConfigVersion", "0");
 		$pcfg->write($pcfgfile);
-	}
+}
+
 $pcfg = new Config::Simple($pcfgfile);
 $pcfg->autosave(1);
+
+# DATA MIGRATION STEPS
+data_migration() if ($pcfg->param("Main.ConfigVersion") < $ConfigVersion);
+
 
 # RRD Database folder
 if ($pcfg->param('Main.rrdfolder') and ! -e $pcfg->param('Main.rrdfolder')) {
@@ -278,6 +288,30 @@ END
 		update_grafana_dashboard();
 	}
 }
+
+sub data_migration 
+{
+	## Migrate to V1
+	if($pcfg->param("Main.ConfigVersion") < 1) {
+		require File::Copy;
+		mkdir "$LoxBerry::System::lbpdatadir/stats4lox";
+		File::Copy::move("$LoxBerry::System::lbpconfigdir/databases.dat", "$LoxBerry::System::lbpdatadir/stats4lox/");
+		File::Copy::move("$LoxBerry::System::lbpconfigdir/dbsettings.dat", "$LoxBerry::System::lbpdatadir/stats4lox/");
+		File::Copy::move("$LoxBerry::System::lbpconfigdir/id_databases.dat", "$LoxBerry::System::lbpdatadir/stats4lox/");
+		$pcfg->param("Main.ConfigVersion", 1);
+	}
+	
+	# Migrate to V2
+	if($pcfg->param("Main.ConfigVersion") < 2 ) {
+	
+	
+	
+	
+	}
+
+}
+
+
 
 
 
