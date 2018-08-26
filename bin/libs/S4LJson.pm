@@ -4,7 +4,6 @@ use File::Copy;
 use warnings;
 use strict;
 
-
 package Stats4Lox::JSON;
 
 our $DEBUG = 0;
@@ -39,6 +38,8 @@ sub open
 	
 	$self->{filename} = $params{filename};
 	$self->{writeonclose} = $params{writeonclose};
+	$self->{readonly} = $params{readonly};
+	
 
 	print STDERR "Stats4Lox::JSON->open: filename is $self->{filename}\n" if ($DEBUG);
 	print STDERR "Stats4Lox::JSON->open: writeonclose is ", $self->{writeonclose} ? "ENABLED" : "DISABLED", "\n" if ($DEBUG);
@@ -89,6 +90,11 @@ sub write
 	print STDERR "Stats4Lox::JSON->write: Called\n" if ($DEBUG);
 	my $self = shift;
 	
+	if ($self->{readonly}) {
+		print STDERR "Stats4Lox::JSON->write: Opened with READONLY - Leaving write\n" if ($DEBUG);
+		return;		
+	}
+	
 	print STDERR "No jsonobj\n" if (!$self->{jsonobj});
 	
 	my $jsoncontent_new;
@@ -115,6 +121,12 @@ sub write
 	rename $self->{filename} . ".tmp", $self->{filename};
 	$self->{jsoncontent} = $jsoncontent_new;
 	
+}
+
+sub filename
+{
+	my $self = shift;
+	return $self->{filename};
 }
 
 sub find
