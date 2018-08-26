@@ -4,7 +4,7 @@ use strict;
 
 package Stats4Lox;
 
-my $ConfigVersion = 1;
+our $ConfigVersion = 1;
 
 my %dbsettings;
 my $installfolder = $LoxBerry::System::lbhomedir;
@@ -27,10 +27,6 @@ if (! -e $pcfgfile) {
 $pcfg = new Config::Simple($pcfgfile);
 $pcfg->autosave(1);
 
-# DATA MIGRATION STEPS
-data_migration() if ($pcfg->param("Main.ConfigVersion") < $ConfigVersion);
-
-
 # RRD Database folder
 if ($pcfg->param('Main.rrdfolder') and ! -e $pcfg->param('Main.rrdfolder')) {
 	# Configured BUT does not exists
@@ -50,16 +46,16 @@ if (! $pcfg->param('GRAFANA.rrdserverport')) {
 	$pcfg->param('GRAFANA.rrdserverport', "3001");
 }
 
-
-
-
-
-
 # Finally import to CFG namespace
 $Stats4Lox::pcfg->import_names('CFG');
 
+# DATA MIGRATION STEPS
+if ($pcfg->param("Main.ConfigVersion") < $ConfigVersion) {
+	require "$LoxBerry::System::lbpbindir/libs/Migration.pm";
+	Stats4Lox::Migration::data_migration()
+}
 
-# Access config variables by $CFG::Main_rrdfolder
+# Access config variables by $CFG::MAIN_RRDFOLDER (all uppercase)
 
 ######################################
 ## Functions to run on demand
