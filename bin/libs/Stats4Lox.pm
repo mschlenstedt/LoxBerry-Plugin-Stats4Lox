@@ -4,7 +4,7 @@ use strict;
 
 package Stats4Lox;
 
-our $ConfigVersion = 1;
+our $ConfigVersion = 2;
 
 my %dbsettings;
 my $installfolder = $LoxBerry::System::lbhomedir;
@@ -54,6 +54,12 @@ if ($pcfg->param("Main.ConfigVersion") < $ConfigVersion) {
 	require "$LoxBerry::System::lbpbindir/libs/Migration.pm";
 	Stats4Lox::Migration::data_migration()
 }
+
+# Defining globals to main namespace (we need it a lot!)
+$main::configfolder=$pcfg->param("Main.configfolder");
+$main::statisticsfile=$main::configfolder . "/statistics.json";
+
+
 
 # Access config variables by $CFG::MAIN_RRDFOLDER (all uppercase)
 

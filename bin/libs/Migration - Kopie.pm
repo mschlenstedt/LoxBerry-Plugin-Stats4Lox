@@ -45,7 +45,7 @@ sub migration_v2
 	unlink $CFG::MAIN_CONFIGFOLDER . "/databases.json";
 	my $config = $jsonparser->open(filename => $CFG::MAIN_CONFIGFOLDER . "/statistics.json", writeonclose => 1);
 
-	my %db_hash;
+	my @db_array;
 	
 	foreach my $key (sort keys %dbs) {
 		#print "DB $dbs{$key}{Description}\n";
@@ -58,8 +58,7 @@ sub migration_v2
 		my $newobj = $jsonnewobj->open(filename => $CFG::MAIN_CONFIGFOLDER . "/$statcfgfilename", writeonclose => 1);
 		
 		# Managing field 0: DB-Name / Statistic ID
-		my $statid = $obj{dbidstr}+0;
-		# $Stat{'statid'} = $statid;
+		$Stat{'statid'} = $obj{dbidstr}+0;
 		$Stat{'statidOld'} = $obj{dbidstr};
 		$Stat{'statCfgFile'} = "$statcfgfilename";
 		$Sink{'RRD'}{'filename'} = $obj{dbidstr} . ".rrd";
@@ -85,7 +84,7 @@ sub migration_v2
 		$Sink{'RRD'}{'minValue'} = $obj{Min};
 		
 		# Managing field 6: Max
-		$Source{'Loxone'}{'minValue'} = $obj{Max};
+		$Source{'Source'}{'Loxone'}{'minValue'} = $obj{Max};
 		$Sink{'RRD'}{'maxValue'} = $obj{Max};
 		
 		# Managing field 7: Place
@@ -103,7 +102,8 @@ sub migration_v2
 		# Managing field 11: Block
 		$Source{'Loxone'}{'blockType'} = $obj{Block};
 		
-		
+		$newobj->{Sink} = \%Sink;
+		$newobj->{Source} = \%Source;
 		
 		# Status from file xxxx.status
 		my $dbstatus = Stats4Lox::read_file($CFG::MAIN_RRDFOLDER . "/" . $obj{dbidstr} . ".status");
@@ -111,16 +111,12 @@ sub migration_v2
 		$Stat{'fetchStatus'} = "error" if ($dbstatus eq "0");
 		$Stat{'fetchStatus'} = "running" if (! $Stat{'fetchStatus'});
 		
-		$newobj->{Sink} = \%Sink;
-		$newobj->{Source} = \%Source;
-		$config->{Stat}{$statid} = \%Stat;
-		
-		#push %db_hash, \%Stat;
+		push @db_array, \%Stat;
 		$jsonnewobj->write();
 		# $jsonnewobj->dump($newobj, "Details");
 	}
 
-	
+	$config->{Stat} = \@db_array;
 	$jsonparser->write();
 	#$jsonparser->dump($config, "Database");
 	$Stats4Lox::pcfg->param("Main.ConfigVersion", 2);

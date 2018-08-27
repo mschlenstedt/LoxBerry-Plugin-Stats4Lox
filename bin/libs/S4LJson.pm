@@ -114,7 +114,7 @@ sub write
 	
 	print STDERR "Stats4Lox::JSON->write: JSON has changed - write to $self->{filename}\n" if ($DEBUG);
 	
-	CORE::open(my $fh, '>', $self->{filename} . ".tmp");
+	CORE::open(my $fh, '>', $self->{filename} . ".tmp") or print STDERR "Error opening file: $!@\n";
 	print $fh $jsoncontent_new;
 	close($fh);
 	rename $self->{filename}, $self->{filename} . ".bkp";
@@ -139,7 +139,7 @@ sub find
 	
 	$self->dump($obj, "Find in object (datatype " . ref($obj) . ")") if ($DUMP);
 		
-	print STDERR "Stats4Lox::JSON->find: Condition: $evalexpr\n";
+	print STDERR "Stats4Lox::JSON->find: Condition: $evalexpr\n" if ($DEBUG);
 	
 	# ARRAY handling
 	if (ref($obj) eq 'ARRAY')
@@ -147,9 +147,7 @@ sub find
 		foreach (0 ... $#{$obj}) {
 			my $key = $_;
 			$_ = ${$obj}[$key];
-			print "Array Key: $key\n";
 			if ( eval "$evalexpr" ) {
-				print "  FOUND in $_\n";
 				push @result, $key;
 			}
 		}
@@ -164,6 +162,7 @@ sub find
 			}
 		}
 	}
+	print STDERR "Stats4Lox::JSON->find: Found " . scalar @result . " elements\n" if ($DEBUG);
 	return @result;
 
 }
