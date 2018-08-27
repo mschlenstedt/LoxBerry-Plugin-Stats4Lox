@@ -24,8 +24,8 @@
 ##########################################################################
 
 use LoxBerry::System;
-require "$lbpbindir/libs/Stats4Lox.pm";
 use LoxBerry::Log;
+require "$lbpbindir/libs/Stats4Lox.pm";
 
 use LWP::UserAgent;
 use String::Escape qw( unquotemeta );
@@ -37,6 +37,22 @@ use RRDs;
 use POSIX qw(ceil);
 
 use Data::Dumper;
+
+##########################################################################
+# Init logfile
+##########################################################################
+
+# Creates a logging object with the filename $lbplogdir/<timestamp>_$lbpplugindir_daemon.log (e.g. /opt/loxberry/log/plugins/kodi/20180417_104703_kodi_daemon.log)
+our $log = LoxBerry::Log->new (
+    name => 'Fetch',
+	stderr => 1,
+	addtime => 1,
+	loglevel => 7
+);
+ 
+
+
+
 
 ##########################################################################
 # Read Settings
@@ -334,6 +350,7 @@ sub data_sending
 		LOGDEB "Number of sinks: " . scalar keys %sinks;
 		foreach my $Sink (keys %sinks) {
 			LOGDEB "Sink $Sink \n";
+			
 			# Load Sink plugin
 			eval {
 				require "$lbpbindir/libs/Sinks/$Sink.pm";
@@ -351,8 +368,8 @@ sub data_sending
 				$ok = "Stats4Lox::Sink::$Sink"->value( 
 						statid => $statid, 
 						statcfg => $statscfg, 
-						timestamp => $datapack{timestamp}, 
-						value => $datapack{value}
+						timestamp => $datapack->{timestamp}, 
+						value => $datapack->{value}
 				);
 			};
 			if ($@) {

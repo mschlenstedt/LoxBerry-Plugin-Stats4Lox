@@ -1,6 +1,7 @@
 #!/usr/bin/perl
+
 package Stats4Lox::Source::Loxone;
-#
+
 # Data fetcher for Loxone Miniserver using HTTP REST webservice
 #
 # The statscfg datastructure contains all information about this statistic. It also

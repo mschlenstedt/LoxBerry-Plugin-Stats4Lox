@@ -1,5 +1,6 @@
 use LoxBerry::System;
 require "$lbpbindir/libs/S4LJson.pm";
+use LoxBerry::Log;
 use strict;
 
 package Stats4Lox;
