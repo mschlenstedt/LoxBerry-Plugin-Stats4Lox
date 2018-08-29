@@ -36,6 +36,7 @@ use Cwd 'abs_path';
 use RRDs;
 use POSIX qw(ceil);
 
+# For debugging
 use Data::Dumper;
 
 ##########################################################################
@@ -311,10 +312,11 @@ sub data_fetching
 			}
 		
 		print STDERR "Returned values: Timestamp: $returnhash{timestamp} Value: $returnhash{value}\n";
-		
+		print Data::Dumper::Dumper(%returnhash);
 		
 		# If we got response, flag the data with the statid and push it to the @dataarray
-		if (%returnhash and $returnhash{timestamp} and $returnhash{value}) {
+		
+		if (defined $returnhash{timestamp} and (defined $returnhash{outputs} or $returnhash{value})) {
 			# Set success status
 			$statsobj->{Stat}->{$key}->{fetchStatus} = 'running';
 			$statsobj->{Stat}->{$key}->{fetchStatusError} = undef;
@@ -336,6 +338,7 @@ sub data_fetching
 
 sub data_sending
 {
+	print STDERR " >=== data_sending =======================\n";
 	LOGINF "data_sending called";
 	foreach my $datapack (@fetcheddata) {
 		my $statid = $datapack->{statid};
@@ -372,7 +375,8 @@ sub data_sending
 						statid => $statid, 
 						statcfg => $statscfg, 
 						timestamp => $datapack->{timestamp}, 
-						value => $datapack->{value}
+						value => $datapack->{value},
+						outputs => $datapack->{outputs}
 				);
 			};
 			if ($@) {

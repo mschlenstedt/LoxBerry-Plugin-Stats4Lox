@@ -3,6 +3,9 @@ require "$lbpbindir/libs/S4LJson.pm";
 use LoxBerry::Log;
 use strict;
 
+# Debugging
+use Data::Dumper;
+
 package Stats4Lox;
 
 our $ConfigVersion = 2;
@@ -45,6 +48,16 @@ if (! $pcfg->param('Main.configfolder') or ! -e $pcfg->param('Main.configfolder'
 
 if (! $pcfg->param('GRAFANA.rrdserverport')) {
 	$pcfg->param('GRAFANA.rrdserverport', "3001");
+}
+# RRDCACHED default parameters
+if (! $pcfg->param('RRD.RRDCACHED_ADDRESS')) {
+	$pcfg->param('RRD.RRDCACHED_ADDRESS', '/var/run/rrdcached.sock');
+}
+if (! $pcfg->param('RRD.RRDCACHED_enabled')) {
+	$pcfg->param('RRD.RRDCACHED_enabled', 'True');
+}
+if (LoxBerry::System::is_enabled($pcfg->param('RRD.RRDCACHED_enabled'))) {
+	$main::RRDCACHED_ADDRESS = $pcfg->param('RRD.RRDCACHED_ADDRESS');
 }
 
 # Finally import to CFG namespace
@@ -246,7 +259,7 @@ sub update_grafana_dashboard
 	# print STDERR "update_grafana_dashboard\n";
 	# We need mtime in epoch
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
-		$atime,$mtime,$ctime,$blksize,$blocks) = stat("$CFG::MAIN_CONFIGFOLDER/databases.dat");
+		$atime,$mtime,$ctime,$blksize,$blocks) = stat("$main::statisticsfile");
 	
 	# Leave if the the dashboards are up-to-date
 	return if ($CFG::GRAFANA_LAST_DASHBOARD_UPDATE and $mtime < $CFG::GRAFANA_LAST_DASHBOARD_UPDATE);

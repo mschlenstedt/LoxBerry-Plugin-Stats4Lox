@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 
+
 package Stats4Lox::Source::Loxone;
 
 # Data fetcher for Loxone Miniserver using HTTP REST webservice
@@ -22,7 +23,7 @@ sub fetch {
 	# The return hash needs to be filled with your value and timestamp
 	my %returnhash;
 
-	print STDERR "StatId $statid ===========================\n";
+	print STDERR ">== Fetch StatId $statid ===\n";
 	#print STDERR "Source: " . $statscfg->{Source}->{Loxone}->{msno} . "\n";
 	#print "StatsCfg loaded (in): " . $statscfg->{Source}->{Loxone}->{fetchSource} . "\n";
 		
@@ -31,30 +32,55 @@ sub fetch {
 
 	my $msno = $statscfg->{Source}->{Loxone}->{msno};
 	my $fetchSource = $statscfg->{Source}->{Loxone}->{fetchSource};
-	#print STDERR "MSNR $msno $fetchSource\n";
+	my %outputs =  %{$statscfg->{Source}->{Loxone}->{outputs}};
+	
+	#print STDERR "MSNR $msno $fetchSource \n";
 	return undef if (! $msno);
 	return undef if (! $fetchSource);
+	
 	#print STDERR "Require LoxBerry::IO\n";
 	require LoxBerry::IO;
 	require Time::HiRes;
 	require URI::Escape;
-	$fetchSource = URI::Escape::uri_escape($fetchSource);
+	$fetchSource_escaped = URI::Escape::uri_escape($fetchSource);
 	#print STDERR "Now sending data to $fetchSource\n";
-	Time::HiRes::usleep(300000);
-	my ($value, $statuscode, $respobj) = LoxBerry::IO::mshttp_call($msno, "/dev/sps/io/$fetchSource/all");
+	my ($loxvalue, $statuscode, $respobj) = LoxBerry::IO::mshttp_call($msno, "/dev/sps/io/$fetchSource_escaped/all");
 	if ($statuscode ne "200") {
 		return undef;
 	}
 	
-	# Filter units
-	$value =~ s/^([\d\.]+).*/$1/g;
-		
-	# Fill the return hash
-	# {value} needs to be your fetched value
-	# {timestamp} needs to be the time of the value in epoch
-	$returnhash{value} = "$value";
+	my %values;
+	foreach my $output (keys %outputs) {
+		$value = $respobj->{output}->{$output}->{value};
+		$label = $outputs{$output};
+		print STDERR "Output '$output' Label $label value $value\n";
+		# Filter units
+		$value =~ s/^([-\d\.]+).*/$1/g;
+		$values{$label} = $value;
+	}
+	
+	if($respobj->{output}->{AQ}->{value}) {
+		$value = $respobj->{output}->{AQ}->{value};
+	} else {
+		$value = $loxvalue;
+	}
+	
+	if(%values) {
+		$returnhash{outputs} = \%values;
+	}
+	
 	$returnhash{timestamp} = time;
-		
+	$value =~ s/^([-\d\.]+).*/$1/g;
+	
+	print STDERR "Value after regex: " . $value . "\n";
+	$returnhash{value} = $value;
+
+	
+
+	print STDERR "returnhash: " . Data::Dumper::Dumper (\%returnhash);
+
+	Time::HiRes::usleep(300*1000);
+	print STDERR "<=== Fetch finished\n";
 	return %returnhash;
 }
 
