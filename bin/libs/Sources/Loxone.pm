@@ -37,6 +37,8 @@ sub fetch {
 	#print STDERR "Require LoxBerry::IO\n";
 	require LoxBerry::IO;
 	require Time::HiRes;
+	require URI::Escape;
+	$fetchSource = URI::Escape::uri_escape($fetchSource);
 	#print STDERR "Now sending data to $fetchSource\n";
 	Time::HiRes::usleep(300000);
 	my ($value, $statuscode, $respobj) = LoxBerry::IO::mshttp_call($msno, "/dev/sps/io/$fetchSource/all");

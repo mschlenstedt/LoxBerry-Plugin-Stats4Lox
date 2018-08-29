@@ -14,7 +14,6 @@ sub value {
 	
 	# Incoming parameters - they may be extended in the future
 	my %params = @_;
-	print STDERR Data::Dumper::Dumper(\%params);
 	$statid = $params{statid};		# The ID of the current statistic
 	$statcfg = $params{statcfg};	# The statistic configuration as a hashref
 	$timestamp = $params{timestamp};# Epoch time of the record
