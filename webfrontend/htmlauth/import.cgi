@@ -23,12 +23,10 @@ use LoxBerry::System;
 require "$lbpbindir/libs/Stats4Lox.pm";
 use LoxBerry::Web;
 use warnings;
+use strict;
 
-
-use CGI;
 # use CGI::Carp qw(fatalsToBrowser);
 use CGI qw/:standard/;
-use DateTime;
 use File::Basename;
 use File::stat;
 use HTML::Entities;
@@ -92,7 +90,7 @@ our %StatTypes = ( 	1, "Jede Änderung (max. ein Wert pro Minute)",
 ##########################################################################
 
 # Version of this script
-my $version = "0.3.1.1";
+my $version = "0.3.1.2";
 
 # Figure out in which subfolder we are installed
 our $psubfolder = $lbpplugindir;
@@ -217,9 +215,11 @@ sub form {
 	# Check if a .LoxPLAN is already available
 		
 	if ( -e $loxconfig_path ) {
-		my $loxchgtime = DateTime->from_epoch ( epoch => stat($loxconfig_path)->mtime, time_zone => $timezone );
+		my $loxchgtime = new Time::Piece(stat($loxconfig_path)->mtime);
+		
+		
 		readloxplan();
-		$upload_message = "Die zuletzt hochgeladene Loxone-Konfiguration ist von " . $loxchgtime->dmy . " " . $loxchgtime->hms . ". Du kannst eine neuere Version hochladen, oder die zuletzt hochgeladene verwenden.";
+		$upload_message = "Die zuletzt hochgeladene Loxone-Konfiguration ist von " . $loxchgtime->dmy(".") . " " . $loxchgtime->hms . ". Du kannst eine neuere Version hochladen, oder die zuletzt hochgeladene verwenden.";
 	} else {
 		$upload_message = "Lade deine Loxone Konfiguration (.loxone bzw. .LoxPlan Datei) hoch. Daraus wird ausgelesen, welche Statistiken du aktuell aktiviert hast.";
 	}
