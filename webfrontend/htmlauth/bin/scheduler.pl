@@ -38,7 +38,7 @@ if($check) {
 my $job_basepath = "$lbhomedir/data/plugins/$lbpplugindir/import";
 
 if (!$CFG::IMPORT_MAX_CONCURRENT_JOBS) {
-	$Stats4Lox::pcfg->param("Import.max_concurrent_jobs", 2);
+	$Stats4Lox::pcfg->param("Import.max_concurrent_jobs", 1);
 }
 
 my $max_concurrent_jobs = $CFG::IMPORT_MAX_CONCURRENT_JOBS ? $CFG::IMPORT_MAX_CONCURRENT_JOBS : 2;

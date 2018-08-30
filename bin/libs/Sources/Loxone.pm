@@ -28,7 +28,7 @@ sub fetch {
 	#print "StatsCfg loaded (in): " . $statscfg->{Source}->{Loxone}->{fetchSource} . "\n";
 		
 	 
-	 # We need the Miniserver number from the $statcfg
+	# We need the Miniserver number from the $statcfg
 
 	my $msno = $statscfg->{Source}->{Loxone}->{msno};
 	my $fetchSource = $statscfg->{Source}->{Loxone}->{fetchSource};
@@ -74,8 +74,6 @@ sub fetch {
 	
 	print STDERR "Value after regex: " . $value . "\n";
 	$returnhash{value} = $value;
-
-	
 
 	print STDERR "returnhash: " . Data::Dumper::Dumper (\%returnhash);
 

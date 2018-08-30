@@ -37,7 +37,10 @@ sub value {
 	
 	if (!%outputs) {
 		main::LOGINF "Handling of simple input";
-		$value = rrd_prepare_write('value', $value);
+
+		# Simple input is easy - send the value to the fixed name 'value'
+
+		$value = _rrd_prepare_write('value', $value);
 		print STDERR "Simple sending: prepared value: $value\n";
 		if ($value) {
 			$sendstring = "$timestamp:$value";
@@ -48,18 +51,30 @@ sub value {
 	else {
 		main::LOGINF "Handling of multiple datasources";
 		my @dsindexes;
+		
+		# Loop through the data output of the fetch 
+		# RRD needs that the values are sent in the order of the datasources
+		# RRDinfo does not respond in a sorted order, but every DS has an counting .index property 
+		# We loop through the output, check if output matches a DS, and set an array @dsindexes[DS-Index] = value
+		# This is very performant, as we really only process the fetched data, and not the RRDinfo hash for matches
+		
 		foreach my $output(keys %outputs) {
+			# %outputs = all outputs, $outputs{$output} = the value,  $output is the ds-name
 			print STDERR $output . " " . $outputs{$output} . "\n";
 			print STDERR %$rrdinfo{"ds[$output].index"} . "\n";
+			# If the RRD has 
 			if(defined %$rrdinfo{"ds[$output].index"}) {
 				print "index found: " . %$rrdinfo{"ds[$output].index"} . "\n";
 				my $dsindex = %$rrdinfo{"ds[$output].index"};
 				print "dsindex: $dsindex Output $outputs{$output}\n";
-				$dsindexes[$dsindex] = $outputs{$output};
+				my $value = _rrd_prepare_write($output, $outputs{$output});
+				$dsindexes[$dsindex] = $value;
 				print "dsindexes[dsindex] $dsindexes[$dsindex]\n";
 			}
 		}
 		print STDERR "Loop array\n";
+		# As we have created the numbered array before in the sequence of the DS's, we generate the sendstring
+		# If an index has no value (e.g. because the fetch did not know the DS), we set U for no value
 		foreach my $index (keys @dsindexes) {
 			print STDERR $index . " " . $dsindexes[$index] . "\n";
 			if ($dsindexes[$index]) {
@@ -70,31 +85,6 @@ sub value {
 		}
 	$sendstring = "$timestamp" . $sendstring if($sendstring);
 	
-	
-	# # Handling of multiple inputs
-		
-		# # We need to send the data in the order of the DS's, and the rrdinfo hash IS NOT ordered
-		# # So we're looping the rrdinfo, looking for the ds[xxxx].index = ?
-		# my @dsindexes;
-		# foreach my $key (keys %$rrdinfo){
-			# my $dsindex = $key;
-			# if ( $dsindex =~ m/ds\[.*\].index\s*=\s*/i) {
-				# $dsindex = $key;
-				# $dsindex =~ s/ds\[.*\].index\s*=\s*//i;
-				# print STDERR "Key $dsindex found from $key\n";
-				# ($dsindexes[$dsindex]) = $key =~ /ds\[(.*)\]/;
-				# print STDERR "Key $dsindex found in $key, extracted $dsindexes[$dsindex]\n";
-			# }
-		# }
-		# # Now we have an ordered array of the ds - every ds should exist in the output
-		# foreach my $ds (@dsindexes) {
-			# print STDERR "$ds is $dsindexes[$ds]\n";
-			# my $value = rrd_prepare_write($ds, $outputs{$ds});
-			# $sendstring .= "$value:" if ($value);
-			# $sendstring .= "U:" if (!$value);
-		# }
-		
-		# $sendstring = substr("$timestamp:$sendstring", 0, -1) if $sendstring;
 	}
 	
 	print STDERR "Current sendstring is: $sendstring\n";
@@ -116,11 +106,9 @@ sub value {
 	}
 }
 
-
-sub rrd_prepare_write
+sub _rrd_prepare_write
 {
 	my ($ds, $value) = @_;
-	
 	
 	# Get Datasource type (GAUGE, COUNTER ...)
 	my $rrd_dstype = %$rrdinfo{"ds[$ds].type"};
@@ -129,13 +117,6 @@ sub rrd_prepare_write
 	
 	if (! $rrd_dstype) {
 	 return undef;
-		# # if the default datasource is not found, let's do fuzzy search
-		# foreach my $key (sort keys %$rrdinfo){
-			# if (index($key, ".type") != -1) {
-				# $rrd_dstype = $$hash{$key}; 
-				# last;
-			# }
-		# }
 	}
 	
 	# With these DS types only INTEGERs are allowed
