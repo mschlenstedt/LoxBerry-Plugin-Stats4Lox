@@ -210,20 +210,27 @@ exit;
 
 sub form {
 
+	my $loxchgtime;
+	my $loxjsonchgtime;
 	# Prepare the form
 	
 	# Check if a .LoxPLAN is already available
 		
 	if ( -e $loxconfig_path ) {
 		my $loxchgtime = new Time::Piece(stat($loxconfig_path)->mtime);
-		
-		
-		readloxplan();
 		$upload_message = "Die zuletzt hochgeladene Loxone-Konfiguration ist von " . $loxchgtime->dmy(".") . " " . $loxchgtime->hms . ". Du kannst eine neuere Version hochladen, oder die zuletzt hochgeladene verwenden.";
 	} else {
 		$upload_message = "Lade deine Loxone Konfiguration (.loxone bzw. .LoxPlan Datei) hoch. Daraus wird ausgelesen, welche Statistiken du aktuell aktiviert hast.";
 	}
-
+	if ( -e "/tmp/stats4lox_loxplan.json" and stat("/tmp/stats4lox_loxplan.json")->mtime > $loxchgtime) {
+		my $jsonparser = Stats4Lox::JSON->new();
+		my $loxplanjson = $jsonparser->open(filename => "/tmp/stats4lox_loxplan.json");
+		%lox_statsobject = %{$loxplanjson->{stats4lox}};
+	}	
+	else {
+		readloxplan();
+	}
+	
 	our $table_linecount = 0;
 	generate_import_table();
 		
@@ -740,6 +747,11 @@ sub readloxplan
 		}
 		logger(4, "Object Name: " . $lox_statsobject{$object->{U}}{Title});
 	}
+	
+	my $jsonparser = Stats4Lox::JSON->new();
+	my $loxplanjson = $jsonparser->open(filename => "/tmp/stats4lox_loxplan.json");
+	$loxplanjson->{stats4lox} = \%lox_statsobject;
+	$jsonparser->write();
 	
 	my $end_run = time();
 	my $run_time = $end_run - $start_run;
