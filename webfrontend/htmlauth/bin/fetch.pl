@@ -97,6 +97,7 @@ my @fetcheddata = data_fetching();
 
 data_sending();
 
+LOGEND();
 exit;
 
 
