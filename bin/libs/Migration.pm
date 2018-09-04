@@ -108,8 +108,11 @@ sub migration_v2
 		# Status from file xxxx.status
 		my $dbstatus = Stats4Lox::read_file($CFG::MAIN_RRDFOLDER . "/" . $obj{dbidstr} . ".status");
 		$Stat{'fetchStatus'} = "paused" if ($dbstatus eq "1");
+		$Stat{'activated'} = 0 if ($dbstatus eq "1");
 		$Stat{'fetchStatus'} = "error" if ($dbstatus eq "0");
+		$Stat{'activated'} = 1 if ($dbstatus eq "0");
 		$Stat{'fetchStatus'} = "running" if (! $Stat{'fetchStatus'});
+		$Stat{'activated'} = 1 if (! $Stat{'activated'});
 		
 		$newobj->{Sink} = \%Sink;
 		$newobj->{Source} = \%Source;

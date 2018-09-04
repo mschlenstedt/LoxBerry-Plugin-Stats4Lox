@@ -18,27 +18,18 @@
   </style>
 
 <!-- Row template -->
-		<div class="tr" id="statsRow" name="statsRow" style="display:none">
-			<div class="td">
-				<label for="activated" style="width:50px;">
-					<input type="checkbox" id="activated" name="activated">Active
-				</label>
-			</div>
-			<div class="td"><span id="name"></span></div>
-			<div class="td"><span id="Source"></span></div>
-			
-			
-			
-			
-			<!-- <label for="activated">Flip toggle switch checkbox:</label> -->
-			<!-- <input type="checkbox" data-role="flipswitch" id="activated"> -->
-
-			<div class="td">Status: <span id="fetchStatus"></span></div>
-			<div class="td">Fetch-Step: <span id="fetchStep"></span></div>
-			<div class="td">statCfgFile: <span id="statCfgFile"></span></div>
-			
-		<!-- <div class="td">statid: <span id="statid"></span></div> -->
+	<div class="tr" id="statsRow" name="statsRow" style="display:none">
+		<div class="td">
+			<label for="Stat|activated" style="width:50px;">
+				<input type="checkbox" id="Stat|activated" name="activated">Active
+			</label>
 		</div>
+		<div class="td"><span id="statcfg|name"></span></div>
+		<div class="td"><span id="Stat|Source"></span></div>
+		<div class="td">Status: <span id="Stat|fetchStatus"></span></div>
+		<div class="td">Fetch-Step: <span id="Stat|fetchStep"></span></div>
+		<div class="td">statCfgFile: <span id="Stat|statCfgFile"></span></div>
+	</div>
 
 
 
@@ -64,9 +55,8 @@ $(document).on('pageinit', function() {
 	//query_stat_data('statistics.json');
 	statsdata = JSON.parse('<TMPL_VAR statsdata>');
 	$.each(statsdata.Stat, buildstatstable);
-	//$.each(statsdata.Stat, request_
 	query_statcfg_data(42);
-	populate(statsdata.Stat);
+	populate(statsdata.Stat, undefined, "Stat");
 	
 });
 	
@@ -123,7 +113,7 @@ function query_statcfg_data(statid)
 		//console.log("query_data response:", resp);
 		//$.each(statsdata.Stat, buildstatstable);
 		statcfg[statid] = resp;
-		populate(statcfg);
+		populate(statcfg[42], 42, "statcfg");
 		
 
 	});
@@ -131,12 +121,13 @@ function query_statcfg_data(statid)
 
 
 
-var populate = function(data, index) {
+var populate = function(data, index, prefix) {
 		// console.log("Populare called");
 		for(var key in data) {
-			console.log("key", key, "index", index, "data", data);
+			console.log("key", key, "index", index, "prefix", prefix);
 			
-			var name = key;
+			// if (prefix !== "") prefix = prefix+'\\|';
+			var name = prefix + '\\|' + key;
 			var value = data[key];
 			
 			if(value === null) 
@@ -145,13 +136,21 @@ var populate = function(data, index) {
 			// console.log("name", typeof name, name, "typeof value", typeof value, "value", value);
 			
 			if( typeof value === 'object' ) {
-				// console.log("Recursive call populate with key", key, "index", index);
-					{index = key+'\\|'};
-				populate(data[key], index);
+				// index = key + '\\|';
+				// console.log("Recursive call populate with key", key, "index", index, "prefix", prefix);
+				
+				populate(data[key], key, prefix);
+				continue;
 			}
 			
-			element = $('#'+index+name);
-			// console.log("Index is", index, "Element is", element.prop('id'), element);
+			var elementid;
+			if (index !== undefined) {
+				elementid = index+'\\|'+name;
+			} else {
+				elementid = name;
+			}
+			element = $('#'+elementid);
+			console.log("Selected element", elementid, "index is", index, "name is", name, "object", element);
 			
 			var type = element.prop('tagName');
 			// console.log("Tagname", type);
@@ -196,10 +195,6 @@ var populate = function(data, index) {
 				case 'SELECT-ONE':
 					$('#'+index+name+' option').filter(function(){ 
 						return $(this).prop('value') == value;}).prop('selected', true);
-					break;
-					
-					
-					
 					break;
 
 				<!-- case 'DATE': -->
