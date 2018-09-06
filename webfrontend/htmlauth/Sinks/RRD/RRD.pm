@@ -125,10 +125,24 @@ sub _rrd_prepare_write
 	}
 	
 	return $value;
+
+}
+
+## Init of the statcfg template
+sub initstatcfg
+{
+	my %returnhash;
+	my $self = shift;
+	# Incoming parameters - they may be extended in the future
+	my %params = @_;
+	$statid = $params{statid};		# This is the ID of the current statistic
+	$statcfg = $params{statcfg};	# This is the statistic configuration as a hashref
 	
-
-
-
+	
+	$returnhash{statcfg} = $statcfg;
+	$returnhash{html} = Stats4Lox::read_file("$LoxBerry::System::lbphtmlauthdir/Sinks/RRD/RRD_statcfg.html");
+	
+	return %returnhash;
 
 }
 

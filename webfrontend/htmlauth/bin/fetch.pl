@@ -292,7 +292,7 @@ sub data_fetching
 		
 		# Load Source Plugin
 		eval {
-			require "$lbpbindir/libs/Sources/$Source/$Source.pm";
+			require "$lbphtmlauthdir/Sources/$Source/$Source.pm";
 		};
 		if ($@) {
 			print STDERR " !!! Source Plugin $plugin failed to load: $@\n";
@@ -360,7 +360,7 @@ sub data_sending
 			
 			# Load Sink plugin
 			eval {
-				require "$lbpbindir/libs/Sinks/$Sink/$Sink.pm";
+				require "$lbphtmlauthdir/Sinks/$Sink/$Sink.pm";
 			};
 			if ($@) {
 					my $errormsg = "data_sending_error StatID $statid ($statscfg->{name}): Sink Plugin $Sink failed to load: $@";

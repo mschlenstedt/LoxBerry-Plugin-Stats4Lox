@@ -20,6 +20,8 @@ my $psubfolder = $LoxBerry::System::lbpplugindir;
 our $pcfgfile = "$LoxBerry::System::lbpconfigdir/stats4lox.cfg";
 our $pcfg;
 
+$main::htmlhead = "<script src='js/stats4lox.js'></script>\n"; 
+
 # Create config file if not exist
 
 if (! -e $pcfgfile) {

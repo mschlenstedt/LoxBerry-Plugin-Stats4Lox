@@ -83,7 +83,25 @@ sub fetch {
 }
 
 
+## Init of the statcfg template
+sub initstatcfg
+{
+	my %returnhash;
+	my $self = shift;
+	# Incoming parameters - they may be extended in the future
+	my %params = @_;
+	$statid = $params{statid};		# This is the ID of the current statistic
+	$statcfg = $params{statcfg};	# This is the statistic configuration as a hashref
+	
+	
+	#$statcfg->{Source}->{Loxone}->{category} = "Hallo!!";
+	
+	$returnhash{statcfg} = $statcfg;
+	$returnhash{html} = Stats4Lox::read_file("$LoxBerry::System::lbphtmlauthdir/Sources/Loxone/Loxone_statcfg.html");
+	
+	return %returnhash;
 
+}
 
 
 
