@@ -19,6 +19,10 @@ $json =~ tr/\r\n//d;
 
 $template->param('statsdata', $json) if ($json);
 
+
+
+
+
 print $template->output();
 
 LoxBerry::Web::lbfooter();

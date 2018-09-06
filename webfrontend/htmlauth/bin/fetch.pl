@@ -278,7 +278,7 @@ sub data_fetching
 	LOGINF "data_fetching called";
 	
 	my @dataarray;
-	my @nextturn = $statsparser->find($statsobj->{Stat}, "\$_->{fetchStep} eq \"$step\" and \$_->{fetchStatus} ne 'paused'");
+	my @nextturn = $statsparser->find($statsobj->{Stat}, "\$_->{fetchStep} eq \"$step\" and \$_->{activated} eq '1'");
 	
 	foreach my $key (@nextturn) {
 		print STDERR "CfgFile: " . $statsobj->{Stat}->{$key}->{statCfgFile} . "\n";
@@ -292,7 +292,7 @@ sub data_fetching
 		
 		# Load Source Plugin
 		eval {
-			require "$lbpbindir/libs/Sources/$Source.pm";
+			require "$lbpbindir/libs/Sources/$Source/$Source.pm";
 		};
 		if ($@) {
 			print STDERR " !!! Source Plugin $plugin failed to load: $@\n";
@@ -360,7 +360,7 @@ sub data_sending
 			
 			# Load Sink plugin
 			eval {
-				require "$lbpbindir/libs/Sinks/$Sink.pm";
+				require "$lbpbindir/libs/Sinks/$Sink/$Sink.pm";
 			};
 			if ($@) {
 					my $errormsg = "data_sending_error StatID $statid ($statscfg->{name}): Sink Plugin $Sink failed to load: $@";
