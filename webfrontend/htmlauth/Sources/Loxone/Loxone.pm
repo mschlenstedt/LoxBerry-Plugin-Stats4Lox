@@ -1,10 +1,10 @@
 #!/usr/bin/perl
 
+package Stats4Lox::Sources::Loxone;
 
-package Stats4Lox::Source::Loxone;
+sub InterfaceDescription 
+{ return "Data fetcher for Loxone Miniserver using HTTP REST webservice"; }
 
-# Data fetcher for Loxone Miniserver using HTTP REST webservice
-#
 # The statscfg datastructure contains all information about this statistic. It also
 # contains information about the datasource (like here, Loxone). It is a hashref 
 # containing hashes. 
@@ -98,6 +98,24 @@ sub initstatcfg
 	
 	$returnhash{statcfg} = $statcfg;
 	$returnhash{html} = Stats4Lox::read_file("$LoxBerry::System::lbphtmlauthdir/Sources/Loxone/Loxone_statcfg.html");
+	
+	return %returnhash;
+
+}
+
+sub initinterface
+{
+	my %returnhash;
+	my $self = shift;
+	# Incoming parameters - they may be extended in the future
+	my %params = @_;
+	$ifacecfg = $params{ifacecfg};	# This is the statistic configuration as a hashref
+	
+	
+	#$statcfg->{Source}->{Loxone}->{category} = "Hallo!!";
+	
+	$returnhash{ifacecfg} = $ifacecfg;
+	$returnhash{html} = Stats4Lox::read_file("$LoxBerry::System::lbphtmlauthdir/Sources/Loxone/Loxone_interfacecfg.html");
 	
 	return %returnhash;
 

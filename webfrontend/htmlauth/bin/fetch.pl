@@ -303,7 +303,7 @@ sub data_fetching
 		# Run the fetch command
 		my %returnhash;
 		eval { 
-			%returnhash = "Stats4Lox::Source::$Source"->fetch( statid => $key, statcfg => $statscfg );
+			%returnhash = "Stats4Lox::Sources::$Source"->fetch( statid => $key, statcfg => $statscfg );
 		};
 		if ($@) {
 			print STDERR " !!! Source Plugin $plugin could not fetch: $@\n";
@@ -372,7 +372,7 @@ sub data_sending
 			# Run the fetch command
 			my $ok;
 			eval { 
-				$ok = "Stats4Lox::Sink::$Sink"->value( 
+				$ok = "Stats4Lox::Sinks::$Sink"->value( 
 						statid => $statid, 
 						statcfg => $statscfg, 
 						timestamp => $datapack->{timestamp}, 

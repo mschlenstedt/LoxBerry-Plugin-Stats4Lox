@@ -96,6 +96,8 @@ sub source_handling
 	$template->param('sourcehtml', $returnhash{html});
 	}
 	
+	$template->param('sourcename', $Source);
+	
 	if ($returnhash{statcfg}) {
 		$statcfgobj = $returnhash{statcfg};
 	}

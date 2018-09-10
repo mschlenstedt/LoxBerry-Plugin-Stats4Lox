@@ -1,9 +1,10 @@
 #!/usr/bin/perl
 
-package Stats4Lox::Sink::RRD;
+package Stats4Lox::Sinks::RRD;
 
-# Data sink for Stats4Lox integrated RRD database
-#
+sub InterfaceDescription 
+{ return "Data sink for Stats4Lox integrated RRD database"; }
+
 # The statscfg datastructure contains all information about this statistic. It also
 # contains information about the datasource (like here, Loxone). It is a hashref 
 # containing hashes. 

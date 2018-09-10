@@ -10,7 +10,7 @@
 	</div>
 </div>
 
-<h3>Source configuration</h3>
+<h3>Source configuration <TMPL_VAR sourcename></h3>
 <TMPL_VAR sourcehtml>
 <hr>
 
@@ -29,7 +29,11 @@ var statcfg = [  ];
 
 $(document).on('pageinit', function() {
 	statcfg = JSON.parse('<TMPL_VAR statcfg>');
-	$('#headingname').text(statcfg.name);
+	if(statcfg.statid === undefined) {
+		$('#headingname').text("<New statistic>");
+	} else {
+		$('#headingname').text(statcfg.name);
+	}
 	populate(statcfg, undefined, "statcfg");
 	
 });

@@ -254,6 +254,28 @@ sub write_file
 	return 1;
 }
 
+sub get_sources
+{
+
+
+
+
+
+
+}
+
+sub get_sinks
+{
+
+
+
+
+
+}
+
+
+
+
 
 # Compares the S4L database timestamp with a Configfile timestamp
 sub update_grafana_dashboard
