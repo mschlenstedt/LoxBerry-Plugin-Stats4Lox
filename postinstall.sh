@@ -56,7 +56,6 @@ if [ ! -d "$Mainrrdfolder" ]; then
   mkdir "$Mainrrdfolder"
 fi
 
-## CF 0.3.1: Not sure if still required in LB1.0 ?
 # Link databases to HTML directory to have access from Client JavaScript
 ln -s "$Mainrrdfolder" "$ARGV5/webfrontend/html/plugins/$ARGV3/databases"
   

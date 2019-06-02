@@ -14,7 +14,7 @@ LBPLOGDIR=REPLACELBPLOGDIR
 PACKAGE=$PLUGINNAME
 NAME=Daemon
 FILENAME=$LBPLOGDIR/daemon.log
-LOGLEVEL=7
+#LOGLEVEL=7
 
 LOGSTART "DAEMON Script from Stats4Lox Plugin"
 
@@ -26,15 +26,7 @@ if [ ! -L /etc/default/rrdcached ]; then
   /usr/sbin/service rrdcached restart
 fi
 
-# Grafana Integration
-iniparser $LBPCONFIGDIR/stats4lox.cfg "GRAFANA"
-GRAFANAenablerrdserver="${GRAFANAenablerrdserver^^}"
-LOGINF "Grafana Integration enabled: $GRAFANAenablerrdserver"
-if [ "$GRAFANAenablerrdserver" == "TRUE" ] || [ "$GRAFANAenablerrdserver" == "1" ] ; then
-	LOGINF "Starting Grafana Integration on port GRAFANArrdserverport"
-	su loxberry -c "$LBPHTMLAUTHDIR/ajax/ajax-settings.cgi action=start key=GRAFANA.enablerrdserver"
-fi
-
 LOGEND "Daemon finished"
+
 # Finished
 exit 0
