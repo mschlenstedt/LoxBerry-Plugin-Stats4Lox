@@ -1,9 +1,9 @@
 #!/bin/sh
 
 # Fetch data
-if [ -x REPLACEINSTALLFOLDER/webfrontend/cgi/plugins/REPLACEFOLDERNAME/bin/fetch.pl ]
+if [ -x REPLACEINSTALLFOLDER/bin/plugins/REPLACEFOLDERNAME/fetch.pl ]
 then
-  cd REPLACEINSTALLFOLDER/webfrontend/cgi/plugins/REPLACEFOLDERNAME/bin/
+  cd REPLACEINSTALLFOLDER/bin/plugins/REPLACEFOLDERNAME/
   /usr/bin/perl fetch.pl -step 300
 fi
 
@@ -13,5 +13,5 @@ jobnr=$(ls -d REPLACEINSTALLFOLDER/data/plugins/REPLACEFOLDERNAME/import/*.job |
 	
 if [ $jobnr -ne 0 ]
 	then 
-		perl REPLACEINSTALLFOLDER/webfrontend/cgi/plugins/REPLACEFOLDERNAME/bin/scheduler.pl
+		perl REPLACEINSTALLFOLDER/bin/plugins/REPLACEFOLDERNAME/scheduler.pl
 fi
