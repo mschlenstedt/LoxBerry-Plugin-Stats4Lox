@@ -20,6 +20,7 @@
 ##########################################################################
 
 use LoxBerry::System;
+use LoxBerry::Storage;
 use LoxBerry::Web;
 use LoxBerry::JSON;
 use CGI::Carp qw(fatalsToBrowser);
@@ -50,6 +51,17 @@ my $cfgfile = "$lbpconfigdir/stats4lox.json";
 # Read json config
 my $jsonobj = LoxBerry::JSON->new();
 my $cfg = $jsonobj->open(filename => $cfgfile);
+
+# Create Default config
+if ( !-e $cfgfile || $cfg->{Main}->{rrdfolder} ) {
+	$cfg->{Main}->{Rrdfolder} = "$lbpdatadir/databases";
+	$cfg->{Main}->{Configfolder} = "$lbpdatadir/s4ldata";
+	$cfg->{Main}->{Configversion} = "2";
+	$cfg->{Rrd}->{Rrdcachedaddress} = "/var/run/rrdcached.sock";
+	$cfg->{Rrd}->{Rrdcachedenabled} = "1";
+	$cfg->{Rrd}->{Rrdcachedinterval} = "3600";
+	$jsonobj->write();
+}
 
 #########################################################################
 # Template
@@ -86,7 +98,7 @@ if( $R::form eq "overview" || !$R::form) {
 elsif ( $R::form eq "settings" ) {
 	$navbar{30}{active} = 1;
 	$template->param("FORM_SETTINGS", 1);
-	#settings_form();
+	settings_form();
 }
 elsif ( $R::form eq "about" ) {
 	$navbar{90}{active} = 1;
@@ -158,6 +170,50 @@ sub logfiles_form {
 #########################################################################
 
 sub about_form {
+
+	return();
+
+}
+
+sub settings_form {
+
+	# Save
+	if ( $R::saveformdata ) {
+		$cfg->{Main}->{Rrdfolder} = "$R::Main_Rrdfolder";
+		$cfg->{Main}->{Configfolder} = "$R::Main_Configfolder";
+		$cfg->{Rrd}->{Rrdcachedenabled} = "$R::Rrd_Rrdcachedenabled";
+		$cfg->{Rrd}->{Rrdcachedaddress} = "$R::Rrd_Rrdcachedaddress";
+		$cfg->{Rrd}->{Rrdcachedintervall} = "$R::Rrd_Rrdcachedintervall";
+		$jsonobj->write();
+		$template->param('HINTSAVED', $L{'SETTINGS.HINT_SAVED'});
+	}
+
+	# Push json config to template
+	my $cfgfilecontent = LoxBerry::System::read_file($cfgfile);
+	$cfgfilecontent =~ s/[\r\n]//g;
+	$template->param('JSONCONFIG', $cfgfilecontent);
+
+	# Config Folder
+	my $configfolder_html = LoxBerry::Storage::get_storage_html(
+		formid => 'Main_Configfolder',
+		currentpath => $cfg->{Main}->{Configfolder},
+		custom_folder => 1,
+		readwriteonly => 1,
+		type_all => 1,
+		data_mini => 1
+	);
+	$template->param('CONFIGFOLDER_SELECT', $configfolder_html);
+
+	# Database Folder
+	my $rrdfolder_html = LoxBerry::Storage::get_storage_html(
+		formid => 'Main_Rrdfolder',
+		currentpath => $cfg->{Main}->{Rrdfolder},
+		custom_folder => 1,
+		readwriteonly => 1,
+		type_all => 1,
+		data_mini => 1
+	);
+	$template->param('RRDFOLDER_SELECT', $rrdfolder_html);
 
 	return();
 

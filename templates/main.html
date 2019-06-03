@@ -1,10 +1,206 @@
-<TMPL_IF FORM1>
-</TMPL_IF>
-
+<TMPL_IF FORM_SETTINGS>
+<!-- *************************************************************************************************************-->
+<!-- Settings -->
 <!-- *************************************************************************************************************-->
 
-<!-- About -->
+	<STYLE>
+		.lb_flex-item 
+		{	
+			min-width	:40%;
+			width		:40%;
+			max-width	:40%;
+			flex-wrap	:nowrap;
+			margin-top	:-10px;  
+		}
+		.lb_flex-item-label
+		{
+			min-width	:20%;
+			position	:relative;
+			margin-left	:10px;
+		}
+		.lb_flex-item-spacer
+		{
+			width	:5%;
+		}
+		.lb_flex-item-help 
+		{
+			min-width	:25%;
+			width		:25%;
+			position	:relative;
+			margin-left	:10px;
+			font-size	:0.8em;
+		}
+		.lb_flex-item-help-wide
+		{
+			min-width	:25%;
+			width		:100%;
+			position	:relative;
+			margin-left	:10px;
+		}
+	</STYLE>
+	
+	<FORM enctype="multipart/form-data" id="main_form" method="post" data-ajax="false"> 
+	<INPUT id="saveformdata" name="saveformdata" type="hidden" value="1">
+	<INPUT id="form" name="form" type="hidden" value="settings">
+	
+	<DIV	class="wide">
+		<TMPL_VAR SETTINGS.LABEL_STORAGESECTION>
+	</DIV>
+	
+	<br>
+	<DIV	class="lb_flex-item-help-wide">
+		<TMPL_VAR SETTINGS.HINT_STORAGESECTION>
+	</DIV>
+	<br>
+	<br>
+	
+	<DIV	class="lb_flex-container settings">
+		<DIV	class="lb_flex-item-label">
+			<LABEL	class=	"control-label" ><TMPL_VAR SETTINGS.LABEL_RRDFOLDER></LABEL>
+		</DIV>
+		<DIV	class="lb_flex-item-spacer"></DIV>
+		<DIV	class="lb_flex-item">
+			<TMPL_VAR RRDFOLDER_SELECT>
+		</DIV>
+		<DIV	class="lb_flex-item-spacer"></DIV>
+		<DIV	class="lb_flex-item-help">
+			<TMPL_VAR SETTINGS.HINT_RRDFOLDER>
+		</DIV>
+		<DIV	class="lb_flex-item-spacer"></DIV>
+	</DIV>
+	
+	<DIV	class="lb_flex-container settings">
+		<DIV	class="lb_flex-item-label">
+			<LABEL	class=	"control-label" ><TMPL_VAR SETTINGS.LABEL_CONFIGFOLDER></LABEL>
+		</DIV>
+		<DIV	class="lb_flex-item-spacer"></DIV>
+		<DIV	class="lb_flex-item">
+			<TMPL_VAR CONFIGFOLDER_SELECT>
+		</DIV>
+		<DIV	class="lb_flex-item-spacer"></DIV>
+		<DIV	class="lb_flex-item-help">
+			<TMPL_VAR SETTINGS.HINT_CONFIGFOLDER>
+		</DIV>
+		<DIV	class="lb_flex-item-spacer"></DIV>
+	</DIV>
+
+	<DIV	class="wide">
+		<TMPL_VAR SETTINGS.LABEL_RRDCACHEDSECTION>
+	</DIV>
+	
+	<br>
+	<DIV	class="lb_flex-item-help-wide">
+		<TMPL_VAR SETTINGS.HINT_RRDCACHEDSECTION>
+	</DIV>
+	<br>
+	<br>
+
+	<DIV	class="lb_flex-container settings">
+		<DIV	class="lb_flex-item-label">
+			<LABEL	class=	"control-label" ><TMPL_VAR SETTINGS.LABEL_RRDCACHEDENABLED></LABEL>
+		</DIV>
+		<DIV	class="lb_flex-item-spacer"></DIV>
+		<DIV	class="lb_flex-item">
+			<input type="checkbox" id="Rrd_Rrdcachedenabled" name="Rrd_Rrdcachedenabled" value="1" data-role="flipswitch">
+		</DIV>
+		<DIV	class="lb_flex-item-spacer"></DIV>
+		<DIV	class="lb_flex-item-help">
+			<TMPL_VAR SETTINGS.HINT_RRDCACHEDENABLED>
+		</DIV>
+		<DIV	class="lb_flex-item-spacer"></DIV>
+	</DIV>
+
+	<DIV	class="lb_flex-container settings">
+		<DIV	class="lb_flex-item-label">
+			<LABEL	class=	"control-label" ><TMPL_VAR SETTINGS.LABEL_RRDCACHEDADDRESS></LABEL>
+		</DIV>
+		<DIV	class="lb_flex-item-spacer"></DIV>
+		<DIV	class="lb_flex-item">
+			<input width="100%" value="" id="Rrd_Rrdcachedaddress" name="Rrd_Rrdcachedaddress" type="text" class="textfield">
+		</DIV>
+		<DIV	class="lb_flex-item-spacer"></DIV>
+		<DIV	class="lb_flex-item-help">
+			<TMPL_VAR SETTINGS.HINT_RRDCACHEDADDRESS>
+		</DIV>
+		<DIV	class="lb_flex-item-spacer"></DIV>
+	</DIV>
+
+	<DIV	class="lb_flex-container settings">
+		<DIV	class="lb_flex-item-label">
+			<LABEL	class=	"control-label" ><TMPL_VAR SETTINGS.LABEL_RRDCACHEDINTERVALL></LABEL>
+		</DIV>
+		<DIV	class="lb_flex-item-spacer"></DIV>
+		<DIV	class="lb_flex-item">
+			<input width="100%" value="" id="Rrd_Rrdcachedintervall" name="Rrd_Rrdcachedintervall" type="text" class="textfield"
+			data-validation-error-msg="<TMPL_VAR SETTINGS.ERR_RRDCACHEDINTERVALL>" data-validation-rule="special:number-min-value:60">
+		</DIV>
+		<DIV	class="lb_flex-item-spacer"></DIV>
+		<DIV	class="lb_flex-item-help">
+			<TMPL_VAR SETTINGS.HINT_RRDCACHEDINTERVALL>
+		</DIV>
+		<DIV	class="lb_flex-item-spacer"></DIV>
+	</DIV>
+	
+
+
+
+
+
+
+	<br><br>
+	<center>
+	<button type="submit" form="main_form" name="btnsubmit" id="btnsubmit" data-role="button" data-inline="true" data-mini="true" data-icon=""><TMPL_VAR SETTINGS.BUTTON_SAVE></button>
+	<br>
+	<br>
+	<DIV	class="lb_flex-item-help-wide" style="color: green">
+		<TMPL_VAR HINTSAVED>
+	</DIV>
+	</center>
+	
+	</FORM>
+
+
+	<SCRIPT>
+
+	// Validation
+	validate_enable('#Rrd_Rrdcachedintervall');
+
+	var cfg;
+
+	$(function() {
+
+		// Parse config
+		cfg = JSON.parse('<TMPL_VAR JSONCONFIG>');
+		//console.log("Config", cfg, cfg.Main, cfg.Rrd);
+
+		// Elements in Remote
+		for(var elemname in cfg.Rrd) {
+			var inputType = $("#Rrd_"+elemname).attr('type');
+			//console.log("Element", elemname, cfg.Rrd[elemname], inputType);
+			if ( inputType == "checkbox" ) {
+	                        if ( cfg.Rrd[elemname] == 1 || cfg.Rrd[elemname] == "True" || cfg.Rrd[elemname] == "true" ) {
+					$("#Rrd_"+elemname).prop('checked', true);
+					$("#Rrd_"+elemname).flipswitch( 'refresh' );
+				} else {
+					$("#Rrd_"+elemname).prop('checked', false);
+					$("#Rrd_"+elemname).flipswitch( 'refresh' );
+				}
+			} else {
+					$("#Rrd_"+elemname).val(cfg.Rrd[elemname]);
+			}
+		}
+
+	});
+
+	</SCRIPT>
+
+
+</TMPL_IF>
+
 <TMPL_IF FORM_ABOUT>
+<!-- *************************************************************************************************************-->
+<!-- About -->
+<!-- *************************************************************************************************************-->
 
 	<TMPL_VAR ABOUT.HINT_INTRO>	
 	<br/>
@@ -51,10 +247,10 @@
 
 </TMPL_IF>
 
-<!-- *************************************************************************************************************-->
-
-<!-- Logfiles -->
 <TMPL_IF FORM_LOGFILES>
+<!-- *************************************************************************************************************-->
+<!-- Logfiles -->
+<!-- *************************************************************************************************************-->
 
 	<TMPL_VAR LOGLIST_HTML>
 
