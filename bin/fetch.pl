@@ -17,8 +17,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-use strict;
-use warnings;
+#use strict;
+#use warnings;
 
 ##########################################################################
 # Modules
@@ -45,7 +45,7 @@ use POSIX qw(ceil);
 ##########################################################################
 
 # Version of this script
-$version = "0.4.0.0";
+my $version = "0.4.0.0";
 
 # Commandline options
 my $verbose = '';
@@ -117,7 +117,7 @@ sub data_fetching
 			require "$lbphtmlauthdir/Sources/$Source/$Source.pm";
 		};
 		if ($@) {
-			print STDERR " !!! Source Plugin $plugin failed to load: $@\n";
+			#print STDERR " !!! Source Plugin $plugin failed to load: $@\n";
 			$statsobj->{Stat}->{$key}->{fetchStatus} = 'error';
 			$statsobj->{Stat}->{$key}->{fetchStatusError} = "Plugin failed to load: $@";
 			next;
@@ -128,7 +128,7 @@ sub data_fetching
 			%returnhash = "Stats4Lox::Sources::$Source"->fetch( statid => $key, statcfg => $statscfg );
 		};
 		if ($@) {
-			print STDERR " !!! Source Plugin $plugin could not fetch: $@\n";
+			#print STDERR " !!! Source Plugin $plugin could not fetch: $@\n";
 			$statsobj->{Stat}->{$key}->{fetchStatus} = 'error';
 			$statsobj->{Stat}->{$key}->{fetchStatusError} = "Plugin failed calling fetch: $@";
 			next;
