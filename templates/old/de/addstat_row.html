@@ -1,0 +1,52 @@
+													<tr>
+														<td width="25%">
+															<label id="labelrra<!--$i-->"><!--$i-->. RRA:</label>
+														</td>
+														<td width="50%">
+														<table border=0>
+															<tr>
+																<td width="5%">
+																	<label id="labelcf<!--$i-->">CF:</label>
+																</td>
+																<td width="20%">
+																<select id="cf<!--$i-->" name="cf<!--$i-->" data-mini="true" data-native-menu="true">
+																	<option value="AVERAGE" <!--$selectedcfx1-->>AVERAGE</option>
+																	<option value="MIN" <!--$selectedcfx2-->>MIN</option>
+																	<option value="MAX" <!--$selectedcfx3-->>MAX</option>
+																	<option value="LAST" <!--$selectedcfx4-->>LAST</option>
+																</select>
+																</td>
+																<td width="5%">
+																	<label id="labelxff<!--$i-->">XFF:</label>
+																</td>
+																<td width="20%">
+																	<input id="xff<!--$i-->" name="xff<!--$i-->" type="text" data-validation="number" class="textfield" value="<!--$xffx-->" 
+																	data-validation-allowing="float" data-validation-optional="true"
+																	data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für XFF (<!--$i-->. RRA) ein.">
+																</td>
+																<td width="5%">
+																	<label id="labelstep<!--$i-->">Step:</label>
+																</td>
+																<td width="20%">
+																	<input id="step<!--$i-->" name="step<!--$i-->" type="text" data-validation="alphanumeric" class="textfield" value="<!--$stepx-->" 
+																	data-validation-optional="true" data-validation-allowing="-+."
+																	data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für Step (<!--$i-->. RRA) ein. Als Dezimaltrennzeichen muss ein Punkt verwendet werden.">
+																</td>
+																<td width="5%">
+																	<label id="labelrows<!--$i-->">Rows:</label>
+																</td>
+																<td width="20%">
+																	<input id="rows<!--$i-->" name="rows<!--$i-->" type="text" data-validation="number" class="textfield" value="<!--$rowsx-->" 
+																	data-validation-optional="true"
+																	data-validation-error-msg="* Bitte geben Sie einen gültigen Wert für Rows (<!--$i-->. RRA) ein.">
+																</td>
+															</tr>
+														</table>
+														</td>
+														<td width="5%" valign="middle">
+															&nbsp;
+														</td>
+														<td width="20%">
+															&nbsp;
+														</td>
+													</tr>

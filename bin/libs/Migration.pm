@@ -85,7 +85,7 @@ sub migration_v2
 		$Sink{'RRD'}{'minValue'} = $obj{Min};
 		
 		# Managing field 6: Max
-		$Source{'Loxone'}{'minValue'} = $obj{Max};
+		$Source{'Loxone'}{'maxValue'} = $obj{Max};
 		$Sink{'RRD'}{'maxValue'} = $obj{Max};
 		
 		# Managing field 7: Place

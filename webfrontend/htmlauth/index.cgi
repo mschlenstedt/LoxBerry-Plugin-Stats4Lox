@@ -20,403 +20,201 @@
 ##########################################################################
 
 use LoxBerry::System;
+use LoxBerry::Storage;
 use LoxBerry::Web;
-require "$lbpbindir/libs/Stats4Lox.pm";
-
-#use CGI::Carp qw(fatalsToBrowser);
-#use CGI qw/:standard/;
-#use Config::Simple;
-#use File::HomeDir;
+use LoxBerry::JSON;
+use CGI::Carp qw(fatalsToBrowser);
+use CGI;
 use File::Copy;
-#use Cwd 'abs_path';
 use warnings;
 use strict;
-no strict "refs"; # we need it for template system
+require "$lbpbindir/libs/Stats4Lox.pm";
 
 ##########################################################################
 # Variables
 ##########################################################################
 
-our $cfg;
-our $phrase;
-our $namef;
-our $value;
-our %query;
-our $lang;
-our $template_title;
-our $help;
-our @help;
-our $helptext;
-our $helplink;
-our $installfolder;
-our $languagefile;
-our $version;
-our $error;
-our $output;
-our $message;
-our $do;
-our $nexturl;
-our @data;
-our @fields;
-our $i;
-our $home = $lbhomedir;
-our $ptablerows;
-our $db;
+# Read Form
+my $cgi = CGI->new;
+$cgi->import_names('R');
 
 ##########################################################################
 # Read Settings
 ##########################################################################
 
 # Version of this script
-$version = "0.3.1.2";
+my $version = "0.4.0.0";
 
-# Figure out in which subfolder we are installed
-our $psubfolder = $lbpplugindir;
+# Config
+my $cfgfile = "$lbpconfigdir/stats4lox.json";
 
-$cfg             = new Config::Simple("$home/config/system/general.cfg");
-$installfolder   = $cfg->param("BASE.INSTALLFOLDER");
-$lang            = $cfg->param("BASE.LANG");
+# Read json config
+my $jsonobj = LoxBerry::JSON->new();
+my $cfg = $jsonobj->open(filename => $cfgfile);
+
+# Create Default config
+if ( !-e $cfgfile || $cfg->{Main}->{rrdfolder} ) {
+	$cfg->{Main}->{Rrdfolder} = "$lbpdatadir/databases";
+	$cfg->{Main}->{Configfolder} = "$lbpdatadir/s4ldata";
+	$cfg->{Main}->{Configversion} = "2";
+	$cfg->{Rrd}->{Rrdcachedaddress} = "/var/run/rrdcached.sock";
+	$cfg->{Rrd}->{Rrdcachedenabled} = "1";
+	$cfg->{Rrd}->{Rrdcachedinterval} = "3600";
+	$jsonobj->write();
+}
 
 #########################################################################
-# Parameter
+# Template
 #########################################################################
 
-# Everything from URL
-foreach (split(/&/,$ENV{'QUERY_STRING'})){
-  ($namef,$value) = split(/=/,$_,2);
-  $namef =~ tr/+/ /;
-  $namef =~ s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
-  $value =~ tr/+/ /;
-  $value =~ s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
-  $query{$namef} = $value;
-}
+# Init Template
+my $template = HTML::Template->new (
+	filename => "$lbptemplatedir/main.html",
+	global_vars => 1,
+	loop_context_vars => 1,
+	die_on_bad_params=> 0,
+	#associate => $cfg,
+	%LoxBerry::Web::htmltemplate_options,
+	debug => 1,
+);
 
-# And this one we really want to use
-$do           = $query{'do'};
-$db           = $query{'db'};
-
-# Filter
-
-my $saveformdata          =~ tr/0-1//cd;
-$saveformdata          = substr($saveformdata,0,1);
-$query{'lang'}         =~ tr/a-z//cd;
-$query{'lang'}         =  substr($query{'lang'},0,2);
-
-##########################################################################
-# Language Settings
-##########################################################################
-
-# Override settings with URL param
-if ($query{'lang'}) {
-  $lang = $query{'lang'};
-}
-
-# Standard is german
-if ($lang eq "") {
-  $lang = "de";
-}
-
-# If there's no language phrases file for choosed language, use german as default
-if (!-e "$installfolder/templates/plugins/$psubfolder/$lang/language.dat") {
-  $lang = "de";
-}
-
-# Read translations / phrases
-$languagefile = "$installfolder/templates/plugins/$psubfolder/$lang/language.dat";
-$phrase = new Config::Simple($languagefile);
-
-##########################################################################
-# Main program
-##########################################################################
+# Language
+my %L = LoxBerry::System::readlanguage($template, "language.ini");
 
 #########################################################################
-# What should we do
+# Template
 #########################################################################
 
-# Menu
-if (!$do || $do eq "form") {
-  &form;
+our %navbar;
+my $shownotifies;
+
+# Switch forms
+if( $R::form eq "overview" || !$R::form) {
+	$navbar{10}{active} = 1;
+	$template->param("FORM_OVERVIEW", 1);
+	$shownotifies = 1;
+	#overview_form();
+}
+elsif ( $R::form eq "settings" ) {
+	$navbar{30}{active} = 1;
+	$template->param("FORM_SETTINGS", 1);
+	settings_form();
+}
+elsif ( $R::form eq "about" ) {
+	$navbar{90}{active} = 1;
+	$template->param("FORM_ABOUT", 1);
+	about_form();
+}
+elsif ( $R::form eq "logfiles" ) {
+	$navbar{99}{active} = 1;
+	$template->param("FORM_LOGFILES", 1);
+	logfiles_form();
 }
 
-# Pause grepping data
-elsif ($do eq "pause") {
-  &pause;
-}
-
-# Start grepping data
-elsif ($do eq "play") {
-  &play;
-}
-
-# Delete a statistic
-elsif ($do eq "delete") {
-  &delete;
-}
-
-else {
-  &form;
-}
+print_form();
 
 exit;
 
-#####################################################
-# Form / Menu
-#####################################################
+#########################################################################
+# Sub Routines
+#########################################################################
 
-sub form {
+#########################################################################
+# Print Form
+#########################################################################
 
-print "Content-Type: text/html\n\n";
+sub print_form {
 
-$template_title = $phrase->param("TXT0000") . ": " . $phrase->param("TXT0001");
-$help = "plugin";
-
-# Create table rows for each Plugin entry
-$ptablerows = "";
-$i = 1;
-open(F,"<$CFG::MAIN_CONFIGFOLDER/databases.dat");
-  @data = <F>;
-  foreach (@data){
-    s/[\n\r]//g;
-    # Comments
-    if ($_ =~ /^\s*#.*/) {
-      next;
-    }
-    @fields = split(/\|/);
-    my $dbname = $fields[0];
-    my $status;
-	open(F,"<" . $CFG::MAIN_RRDFOLDER . "/$dbname.status");
-      $status = <F>;
-    close(F);
-    $ptablerows = $ptablerows . "<tr><th style='vertical-align:middle'>$i</th><td style='vertical-align:middle'>$fields[2]</td><td style='vertical-align:middle'>$fields[3]</td><td style='text-align:center; vertical-align:middle'>$fields[4]</td>";
-    $ptablerows = $ptablerows . "<td style='text-align:left; vertical-align:middle'>";
-    if ($status eq "0") {
-      $ptablerows = $ptablerows . "<img src='/plugins/$psubfolder/images/icons/statusred.png' alt='" . $phrase->param("TXT0016") . "' title='" . $phrase->param("TXT0017") . "'></td>";
-    }
-    elsif ($status eq "1") {
-      $ptablerows = $ptablerows . "<img src='/plugins/$psubfolder/images/icons/statusyellow.png' alt='" . $phrase->param("TXT0018") . "' title='" . $phrase->param("TXT0019") . "'></td>";
-    }
-    else {
-      $ptablerows = $ptablerows . "<img src='/plugins/$psubfolder/images/icons/statusgreen.png' alt='" . $phrase->param("TXT0020") . "' title='" . $phrase->param("TXT0021") . "'></td>";
-    }
-    $ptablerows = $ptablerows . "<td style='vertical-align:middle'><a href='./index.cgi?do=pause&db=$dbname'><img src='/plugins/$psubfolder/images/icons/pause.png' alt='" . $phrase->param("TXT0018") . "'></a>";
-    $ptablerows = $ptablerows . "&nbsp;<a href='./index.cgi?do=play&db=$dbname'><img src='/plugins/$psubfolder/images/icons/play.png' alt='" . $phrase->param("TXT0022") . "'></a>";
-    $ptablerows = $ptablerows . "&nbsp;<a href='./dbinfo.cgi?db=$dbname'><img src='/plugins/$psubfolder/images/icons/info.png' alt='" . $phrase->param("TXT0023") . "'></a>";
-    $ptablerows = $ptablerows . "&nbsp;<a href='./quickchart.cgi?db=$dbname'><img src='/plugins/$psubfolder/images/icons/chart.png' alt='" . $phrase->param("TXT0027") . "'></a>";
-    $ptablerows = $ptablerows . "&nbsp;<a href='./index.cgi?do=import&db=$dbname'><img src='/plugins/$psubfolder/images/icons/import.png' alt='" . $phrase->param("TXT0024") . "'></a>";
-    $ptablerows = $ptablerows . "&nbsp;<a href='./index.cgi?do=export&db=$dbname'><img src='/plugins/$psubfolder/images/icons/export.png' alt='" . $phrase->param("TXT0025") . "'></a>";
-    $ptablerows = $ptablerows . "&nbsp;<a href='./index.cgi?do=config&db=$dbname'><img src='/plugins/$psubfolder/images/icons/config.png' alt='" . $phrase->param("TXT0026") . "'></a>";
-    $ptablerows = $ptablerows . "&nbsp;<a href='./index.cgi?do=delete&db=$dbname'><img src='/plugins/$psubfolder/images/icons/trash.png' alt='" . $phrase->param("TXT0027") . "'></a></td></tr>";
-    $i++;
-  }
-close (F);
-
-# Print Template
-&header;
-open(F,"$installfolder/templates/plugins/$psubfolder/$lang/mainmenu.html") || die "Missing template plugins/$psubfolder/$lang/mainmenu.html.html";
-  while (<F>) {
-    $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-    print $_;
-  }
-close(F);
-&footer;
-
-exit;
-
-}
-
-#####################################################
-# Pause grepping data
-#####################################################
-
-sub pause {
-
-if (!$db) {
-	$db = "all";
-}
-
-# Update database
-open(F,"<$CFG::MAIN_CONFIGFOLDER/databases.dat") or die "Could not open databases.dat: $!";
-  @data = <F>;
-  foreach (@data){
-    s/[\n\r]//g;
-    # Comments
-    if ($_ =~ /^\s*#.*/) {
-      next;
-    }
-    @fields = split(/\|/);
-    if ($fields[0] eq $db || $db eq "all") {
-	open(F1,">" . $CFG::MAIN_RRDFOLDER . "/$fields[0].status");
-	flock(F1, 2);
-	print F1 "1";
-	close(F1);
-    }
-  }
-close (F);
-
-&form;
-
-exit;
-
-}
-
-#####################################################
-# Start grepping data
-#####################################################
-
-sub play {
-
-if (!$db) {
-	$db = "all";
-}
-
-# Update database
-open(F,"<$CFG::MAIN_CONFIGFOLDER/databases.dat") or die "Could not open databases.dat: $!";
-  @data = <F>;
-  foreach (@data){
-    s/[\n\r]//g;
-    # Comments
-    if ($_ =~ /^\s*#.*/) {
-      next;
-    }
-    @fields = split(/\|/);
-    if ($fields[0] eq $db || $db eq "all") {
-	open(F1,">" . $CFG::MAIN_RRDFOLDER . "/$fields[0].status");
-	flock(F1, 2);
-	print F1 "2";
-	close(F1);
-    }
-  }
-close (F);
-
-&form;
-
-exit;
-
-}
-
-#####################################################
-# Delete a statistic
-#####################################################
-
-sub delete {
-
-	my $newfilecontent;
+	$navbar{10}{Name} = "$L{'GENERAL.LABEL_OVERVIEW'}";
+	$navbar{10}{URL} = 'index.cgi?form=overview';
 	
-	if (!$db) {
-		error();
-		exit;
+	$navbar{20}{Name} = "$L{'GENERAL.LABEL_IMPORTWIZARD'}";
+	$navbar{20}{URL} = 'importwizard.cgi';
+	
+	$navbar{30}{Name} = "$L{'GENERAL.LABEL_SETTINGS'}";
+	$navbar{30}{URL} = 'index.cgi?form=settings';
+	
+	$navbar{90}{Name} = "$L{'GENERAL.LABEL_ABOUT'}";
+	$navbar{90}{URL} = 'index.cgi?form=about';
+	
+	$navbar{99}{Name} = "$L{'GENERAL.LABEL_LOGFILES'}";
+	$navbar{99}{URL} = 'index.cgi?form=logfiles';
+	
+	
+	my $plugintitle = $L{'GENERAL.LABEL_PLUGINTITLE'} . " v" . LoxBerry::System::pluginversion();
+	my $helplink = "https://www.loxwiki.eu/x/voK4";
+	my $helptemplate = "help.html";
+	
+	LoxBerry::Web::lbheader($plugintitle, $helplink, $helptemplate);
+	if ($navbar{10}{active} eq 1) {
+		print LoxBerry::Log::get_notifications_html($lbpplugindir);
+	}
+	print $template->output();
+	LoxBerry::Web::lbfooter();
+
+}
+
+#########################################################################
+# Form: Logfiles
+#########################################################################
+
+sub logfiles_form {
+
+	$template->param( "LOGLIST_HTML", LoxBerry::Web::loglist_html() );
+	return();
+
+}
+
+#########################################################################
+# Form: About
+#########################################################################
+
+sub about_form {
+
+	return();
+
+}
+
+sub settings_form {
+
+	# Save
+	if ( $R::saveformdata ) {
+		$cfg->{Main}->{Rrdfolder} = "$R::Main_Rrdfolder";
+		$cfg->{Main}->{Configfolder} = "$R::Main_Configfolder";
+		$cfg->{Rrd}->{Rrdcachedenabled} = "$R::Rrd_Rrdcachedenabled";
+		$cfg->{Rrd}->{Rrdcachedaddress} = "$R::Rrd_Rrdcachedaddress";
+		$cfg->{Rrd}->{Rrdcachedintervall} = "$R::Rrd_Rrdcachedintervall";
+		$jsonobj->write();
+		$template->param('HINTSAVED', $L{'SETTINGS.HINT_SAVED'});
 	}
 
-	# Read
-	open(F,"<$CFG::MAIN_CONFIGFOLDER/databases.dat") or die "Could not open databases.dat: $!";
-	flock(F, 2);
-	@data = <F>;
-	foreach (@data){
-		s/[\n\r]//g;
-		# Comments
-		if ($_ =~ /^\s*#.*/) {
-		  $newfilecontent .= $_ . "\n";
-		  next;
-		}
-		@fields = split(/\|/);
-		if ($fields[0] ne $db) {
-				$newfilecontent .= $_ . "\n";
-				next;
-		}
-		# Move files to /tmp - /tmp usually is cleared on reboot
-		move ($CFG::MAIN_RRDFOLDER . "/$fields[0].status", "/tmp/");
-		move ($CFG::MAIN_RRDFOLDER . "/$fields[0].info", "/tmp/");
-		move ($CFG::MAIN_RRDFOLDER . "/$fields[0].rrd", "/tmp/");
-	}
-	# Create backups of databases.dat every delete
-	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = CORE::localtime(time);
-	my $nowstring = sprintf("%04d%02d%02d-%02d%02d%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec);
-	copy("$CFG::MAIN_CONFIGFOLDER/databases.dat", "/tmp/databases.$nowstring.back");
-	close(F);
-	# Write new file
-	open(F,">$CFG::MAIN_CONFIGFOLDER/databases.dat") or die "Could not open databases.dat: $!";
-	flock(F, 2);
-	print F $newfilecontent;
-	close (F);
-	&form;
+	# Push json config to template
+	my $cfgfilecontent = LoxBerry::System::read_file($cfgfile);
+	$cfgfilecontent =~ s/[\r\n]//g;
+	$template->param('JSONCONFIG', $cfgfilecontent);
 
-	exit;
+	# Config Folder
+	my $configfolder_html = LoxBerry::Storage::get_storage_html(
+		formid => 'Main_Configfolder',
+		currentpath => $cfg->{Main}->{Configfolder},
+		custom_folder => 1,
+		readwriteonly => 1,
+		type_all => 1,
+		data_mini => 1
+	);
+	$template->param('CONFIGFOLDER_SELECT', $configfolder_html);
 
-}
+	# Database Folder
+	my $rrdfolder_html = LoxBerry::Storage::get_storage_html(
+		formid => 'Main_Rrdfolder',
+		currentpath => $cfg->{Main}->{Rrdfolder},
+		custom_folder => 1,
+		readwriteonly => 1,
+		type_all => 1,
+		data_mini => 1
+	);
+	$template->param('RRDFOLDER_SELECT', $rrdfolder_html);
 
-#####################################################
-# 
-# Subroutines
-#
-#####################################################
-
-#####################################################
-# Error
-#####################################################
-
-sub error {
-
-$template_title = $phrase->param("TXT0000") . " - " . $phrase->param("TXT0043");
-$help = "plugin";
-
-print "Content-Type: text/html\n\n";
-
-&header;
-open(F,"$installfolder/templates/system/$lang/error.html") || die "Missing template system/$lang/error.html";
-    while (<F>) {
-      $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-      print $_;
-    }
-close(F);
-&footer;
-
-exit;
-
-}
-
-#####################################################
-# Header
-#####################################################
-
-sub header {
-
-  # create help page
-  $helplink = "http://www.loxwiki.eu:80/x/o4CO";
-  Stats4Lox::navbar_main(10);
-  LoxBerry::Web::lbheader("Statistics 4 Loxone", $helplink, "help.html");
-  
-
-
-
-  # open(F,"$installfolder/templates/system/$lang/help/$help.html") || die "Missing template system/$lang/help/$help.html";
-    # @help = <F>;
-    # foreach (@help){
-      # s/[\n\r]/ /g;
-      # $helptext = $helptext . $_;
-    # }
-  # close(F);
-
-  # open(F,"$installfolder/templates/system/$lang/header.html") || die "Missing template system/$lang/header.html";
-    # while (<F>) {
-      # $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-      # print $_;
-    # }
-  # close(F);
-
-}
-
-#####################################################
-# Footer
-#####################################################
-
-sub footer {
-
-  LoxBerry::Web::lbfooter();
-  # open(F,"$installfolder/templates/system/$lang/footer.html") || die "Missing template system/$lang/footer.html";
-    # while (<F>) {
-      # $_ =~ s/<!--\$(.*?)-->/${$1}/g;
-      # print $_;
-    # }
-  # close(F);
+	return();
 
 }

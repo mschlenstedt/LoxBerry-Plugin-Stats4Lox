@@ -1,0 +1,20 @@
+<TMPL_IF ifacelist>
+<!-- Interface list for interface -->
+
+	<div class="wide">Interfaces</div>
+	<h2>Sources</h2>
+	<TMPL_LOOP Sources>
+		<div><b><TMPL_VAR InterfaceName></b> <TMPL_VAR InterfaceDescription> <a href="?interfacename=<TMPL_VAR InterfaceName>&interfacetype=<TMPL_VAR InterfaceType>">Configure...</a></div>
+	</TMPL_LOOP>
+	<h2>Sinks</h2>
+	<TMPL_LOOP Sinks>
+		<div><b><TMPL_VAR InterfaceName></b> <TMPL_VAR InterfaceDescription> <a href="?interfacename=<TMPL_VAR InterfaceName>&interfacetype=<TMPL_VAR InterfaceType>">Configure...</a></div>
+	</TMPL_LOOP>
+
+</TMPL_IF>
+
+<TMPL_IF ifacename>
+<!-- Detail page for interface -->
+	<div class="wide">Interface <TMPL_VAR ifacename></div>
+	<TMPL_VAR ifacehtml>
+</TMPL_IF>
