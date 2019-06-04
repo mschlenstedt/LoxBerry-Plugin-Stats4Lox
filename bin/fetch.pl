@@ -17,14 +17,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#use strict;
-#use warnings;
+use strict;
+use warnings;
 
 ##########################################################################
 # Modules
 ##########################################################################
 
 use LoxBerry::System;
+use LoxBerry::JSON;
 use LoxBerry::Log;
 require "$lbpbindir/libs/Stats4Lox.pm";
 
@@ -45,7 +46,7 @@ use POSIX qw(ceil);
 ##########################################################################
 
 # Version of this script
-my $version = "0.4.0.0";
+my $version = "0.4.0.1";
 
 # Commandline options
 my $verbose = '';
@@ -53,9 +54,16 @@ my $step = '300';
 my $help = '';
 
 GetOptions ('verbose' => \$verbose,
-			'step=i' => \$step,
-			'quiet'   => sub { $verbose = 0 });
-			
+		'step=i' => \$step,
+		'quiet'   => sub { $verbose = 0 });
+
+# Config
+my $cfgfile = "$lbpconfigdir/stats4lox.json";
+
+# Read json config
+my $jsonobj = LoxBerry::JSON->new();
+my $cfg = $jsonobj->open(filename => $cfgfile);
+
 ##########################################################################
 # Init logfile
 ##########################################################################
@@ -70,6 +78,10 @@ if ($verbose) {
 	$log->loglevel(7);
 }
 
+##########################################################################
+# Fetch
+##########################################################################
+
 LOGSTART "Stats4Lox Fetcher Step $step";
 LOGDEB "This is $0 Version $version";
 
@@ -77,17 +89,25 @@ LOGDEB "This is $0 Version $version";
 LOGINF "Starting $0 Version $version for Step $step s";
 
 # Wait 0-5 seconds randomly to let different instances not to start simoultaniously
-#sleep rand(5);
+sleep rand(5);
 
 # Read Statistics.json
+my $statisticsfile = "$cfg->{Main}->{Configfolder}/statistics.json";
+if (!-e "$statisticsfile") {
+	LOGERR "$statisticsfile does not exist. Giving up.";
+	exit 2;
+}
 my $statsparser = Stats4Lox::JSON->new();
 my $statsobj = $statsparser->open(filename => $statisticsfile, writeonclose => 1);
 #$statsparser->dump($statsobj);
 
+# Fetch data from Sources
 my @fetcheddata = data_fetching();
 
+# Send data to Sinks
 data_sending();
 
+# End
 LOGEND();
 exit;
 
@@ -108,7 +128,7 @@ sub data_fetching
 		
 		# Read Datasource data to make it more easy for the Source developer
 		my $statcfgparser = Stats4Lox::JSON->new();
-		my $statcfgfilename = $configfolder . "/" . $statsobj->{Stat}->{$key}->{statCfgFile};
+		my $statcfgfilename = $cfg->{Main}->{Configfolder} . "/" . $statsobj->{Stat}->{$key}->{statCfgFile};
 		#print "Statcfgfilename: $statcfgfilename\n";
 		our $statscfg = $statcfgparser->open(filename => $statcfgfilename, writeonclose => 1);
 		
@@ -168,7 +188,7 @@ sub data_sending
 		# LOGDEB "Datapack/Statid:\n" . Dumper($datapack, $statid);
 		
 		my $statcfgparser = Stats4Lox::JSON->new();
-		my $statcfgfilename = $configfolder . "/" . $statsobj->{Stat}->{$statid}->{statCfgFile};
+		my $statcfgfilename = $cfg->{Main}->{Configfolder} . "/" . $statsobj->{Stat}->{$statid}->{statCfgFile};
 		my $statscfg = $statcfgparser->open(filename => $statcfgfilename, writeonclose => 1);
 	
 		
