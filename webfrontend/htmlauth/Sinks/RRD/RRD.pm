@@ -2,7 +2,7 @@
 
 package Stats4Lox::Sinks::RRD;
 
-use use RRDs;
+use RRDs;
 
 sub InterfaceDescription 
 { return "Data sink for Stats4Lox integrated RRD database"; }
