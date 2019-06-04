@@ -27,26 +27,21 @@ use warnings;
 use LoxBerry::System;
 use LoxBerry::JSON;
 use LoxBerry::Log;
-require "$lbpbindir/libs/Stats4Lox.pm";
-
 use LWP::UserAgent;
 use String::Escape qw( unquotemeta );
 use URI::Escape;
 use XML::Simple qw(:strict);
 use Getopt::Long;
-use Cwd 'abs_path';
-use RRDs;
-use POSIX qw(ceil);
-
-# For debugging
+#use POSIX qw(ceil);
 #use Data::Dumper;
+require "$lbpbindir/libs/Stats4Lox.pm";
 
 ##########################################################################
 # Read Settings
 ##########################################################################
 
 # Version of this script
-my $version = "0.4.0.1";
+my $version = "0.4.0.2";
 
 # Commandline options
 my $verbose = '';
@@ -69,7 +64,7 @@ my $cfg = $jsonobj->open(filename => $cfgfile);
 ##########################################################################
 
 our $log = LoxBerry::Log->new (
-	name => 'Fetch',
+	name => "Fetch_$step",
 	addtime => 1,
 );
 
